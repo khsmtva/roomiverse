@@ -1,0 +1,285 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROOMIVERSE - Крестики-нолики</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="container game-page">
+        <!-- Шапка с логотипом (как на главной) -->
+        <div class="header-with-lines">
+            <h1 class="logo">ROOMIVERSE</h1>
+        </div>
+
+        <!-- Информация о комнате -->
+        <div class="game-header">
+            <div class="room-info">
+                <span class="room-label">Комната</span>
+                <span class="room-code" id="roomCodeDisplay">{{ room_code }}</span>
+                <button class="copy-btn-small" onclick="copyRoomCode()">📋</button>
+            </div>
+            <a href="/lobby?code={{ room_code }}" class="back-to-lobby">← В лобби</a>
+        </div>
+
+        <!-- Игроки -->
+        <div class="players-status">
+            <div class="player-card-small player-x" id="playerXCard">
+                <div class="player-symbol-small">X</div>
+                <div class="player-info">
+                    <span class="player-name-small" id="playerXName">Загрузка...</span>
+                    <span class="player-status-small" id="playerXStatus">⚡ ходит</span>
+                </div>
+            </div>
+            <div class="vs-small">VS</div>
+            <div class="player-card-small player-o" id="playerOCard">
+                <div class="player-symbol-small">O</div>
+                <div class="player-info">
+                    <span class="player-name-small" id="playerOName">Загрузка...</span>
+                    <span class="player-status-small" id="playerOStatus">⏳ ждет</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Игровое поле -->
+        <div class="game-board-container">
+            <div class="game-stats">
+                <span class="turn-indicator" id="turnIndicator">Ход: X</span>
+                <span class="moves-counter" id="movesCounter">Ходов: 0</span>
+            </div>
+            <div class="game-board" id="gameBoard"></div>
+        </div>
+
+        <!-- Кнопки -->
+        <div class="game-actions">
+            <button class="game-action-btn restart-btn" onclick="restartGame()">🔄 Новая игра</button>
+            <button class="game-action-btn surrender-btn" onclick="surrender()">🏳️ Сдаться</button>
+        </div>
+
+        <!-- Чат -->
+        <div class="compact-chat">
+            <div class="compact-chat-header" onclick="toggleChat()">
+                <span>💬 Чат</span>
+                <span class="chat-toggle">▼</span>
+            </div>
+            <div class="compact-chat-body" id="compactChatBody">
+                <div class="compact-chat-messages" id="compactChatMessages"></div>
+                <div class="compact-chat-input-area">
+                    <input type="text" class="compact-chat-input" id="compactChatInput" 
+                           placeholder="Сообщение..." onkeypress="checkEnter(event)">
+                    <button class="compact-chat-send" onclick="sendCompactMessage()">➤</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const roomCode = "{{ room_code }}";
+        const playerName = localStorage.getItem('playerName');
+        let currentPlayerId = 'p1';
+        let gameOver = false;
+        
+        const socket = io();
+        
+        // Подключаемся к комнате
+        socket.emit('join_room', {
+            room_code: roomCode,
+            name: playerName
+        });
+        
+        // Загружаем состояние игры
+        function loadGameState() {
+            fetch(`/api/game_state/${roomCode}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) return;
+                    updateGameDisplay(data);
+                });
+        }
+        
+        // Обновляем отображение
+        function updateGameDisplay(data) {
+            renderBoard(data.board);
+            
+            document.getElementById('turnIndicator').innerHTML = `Ход: ${data.current_player.symbol}`;
+            document.getElementById('movesCounter').innerHTML = `Ходов: ${data.move_count}`;
+            
+            // Подсвечиваем активного игрока
+            if (data.current_player.id === 'p1') {
+                document.getElementById('playerXCard').classList.add('active');
+                document.getElementById('playerOCard').classList.remove('active');
+                document.getElementById('playerXStatus').innerHTML = '⚡ ходит';
+                document.getElementById('playerOStatus').innerHTML = '⏳ ждет';
+            } else {
+                document.getElementById('playerXCard').classList.remove('active');
+                document.getElementById('playerOCard').classList.add('active');
+                document.getElementById('playerXStatus').innerHTML = '⏳ ждет';
+                document.getElementById('playerOStatus').innerHTML = '⚡ ходит';
+            }
+            
+            currentPlayerId = data.current_player.id;
+            gameOver = data.game_over;
+            
+            if (data.game_over) {
+                showGameResult(data);
+            }
+        }
+        
+        // Рисуем поле 9x9
+        function renderBoard(board) {
+            const boardDiv = document.getElementById('gameBoard');
+            boardDiv.innerHTML = '';
+            
+            for (let i = 0; i < 9; i++) {
+                for (let j = 0; j < 9; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'game-cell';
+                    
+                    const value = board[i][j];
+                    if (value === 'X') {
+                        cell.classList.add('x');
+                        cell.textContent = 'X';
+                    } else if (value === 'O') {
+                        cell.classList.add('o');
+                        cell.textContent = 'O';
+                    } else {
+                        cell.innerHTML = '·';
+                    }
+                    
+                    cell.onclick = () => makeMove(i, j);
+                    boardDiv.appendChild(cell);
+                }
+            }
+        }
+        
+        // Делаем ход
+        function makeMove(row, col) {
+            if (gameOver) {
+                alert('Игра уже закончена!');
+                return;
+            }
+            
+            fetch('/api/make_move', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    room_code: roomCode,
+                    player_id: currentPlayerId,
+                    row: row,
+                    col: col
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadGameState();
+                } else {
+                    alert(data.message);
+                }
+            });
+        }
+        
+        // Показываем результат
+        function showGameResult(data) {
+            setTimeout(() => {
+                const modal = document.createElement('div');
+                modal.className = 'modal';
+                
+                const content = document.createElement('div');
+                content.className = 'modal-content';
+                
+                if (data.winner) {
+                    content.innerHTML = `
+                        <div class="winner-emoji">🏆</div>
+                        <h2>ПОБЕДИТЕЛЬ</h2>
+                        <div class="winner-name">${data.winner.name}</div>
+                        <div class="modal-buttons">
+                            <button onclick="location.reload()" class="modal-btn">Играть снова</button>
+                            <button onclick="this.closest('.modal').remove()" class="modal-btn secondary">Закрыть</button>
+                        </div>
+                    `;
+                } else {
+                    content.innerHTML = `
+                        <div class="winner-emoji">🤝</div>
+                        <h2>НИЧЬЯ</h2>
+                        <div class="modal-buttons">
+                            <button onclick="location.reload()" class="modal-btn">Играть снова</button>
+                            <button onclick="this.closest('.modal').remove()" class="modal-btn secondary">Закрыть</button>
+                        </div>
+                    `;
+                }
+                
+                modal.appendChild(content);
+                document.body.appendChild(modal);
+            }, 300);
+        }
+        
+        function restartGame() {
+            if (confirm('Начать новую игру?')) {
+                location.reload();
+            }
+        }
+        
+        function surrender() {
+            alert('Функция "сдаться" будет добавлена позже');
+        }
+        
+        function copyRoomCode() {
+            navigator.clipboard.writeText(roomCode);
+            alert('Код скопирован: ' + roomCode);
+        }
+        
+        // Чат
+        function toggleChat() {
+            const chatBody = document.getElementById('compactChatBody');
+            const toggle = document.querySelector('.chat-toggle');
+            chatBody.classList.toggle('hidden');
+            toggle.textContent = chatBody.classList.contains('hidden') ? '▶' : '▼';
+        }
+        
+        function sendCompactMessage() {
+            const input = document.getElementById('compactChatInput');
+            const message = input.value.trim();
+            
+            if (message) {
+                socket.emit('send_message', {
+                    room_code: roomCode,
+                    message: message
+                });
+                input.value = '';
+            }
+        }
+        
+        function checkEnter(event) {
+            if (event.key === 'Enter') {
+                sendCompactMessage();
+            }
+        }
+        
+        socket.on('new_message', (data) => {
+            const chatMessages = document.getElementById('compactChatMessages');
+            chatMessages.innerHTML += `
+                <div class="compact-message">
+                    <span class="compact-sender">${data.sender}:</span>
+                    <span>${data.message}</span>
+                </div>
+            `;
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+        
+        socket.on('players_update', (data) => {
+            if (data.players.length >= 2) {
+                document.getElementById('playerXName').textContent = data.players[0];
+                document.getElementById('playerOName').textContent = data.players[1];
+            }
+        });
+        
+        // Загружаем игру
+        loadGameState();
+        setInterval(loadGameState, 2000);
+    </script>
+</body>
+</html>
