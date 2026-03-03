@@ -1,0 +1,634 @@
+﻿* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: url('https://i.pinimg.com/originals/22/db/6f/22db6feb176ed934f110c43d74895cc7.jpg') no-repeat center center fixed;
+    background-size: cover;
+    min-height: 100vh;
+    color: #fff;
+    position: relative;
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(10, 10, 26, 0.6);
+    z-index: -1;
+}
+
+.container {
+    max-width: 1200px;
+    width: 90%;
+    margin: 0 auto;
+    padding: 40px 20px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Контейнер для ROOMIVERSE с линиями */
+.header-with-lines {
+    position: relative;
+    margin-top: 10;              /* поднимает шапку в самый верх */
+    margin-bottom: 10px;
+    padding: 20px 0;
+    border-top: 2px solid transparent;
+    border-bottom: 2px solid transparent;
+    border-image: linear-gradient(90deg, #667eea, #764ba2, #667eea);
+    border-image-slice: 1;
+    display: inline-block;
+}
+.logo {
+    font-size: 4rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin: 0;
+    line-height: 1;
+}
+
+/* Слоган отдельно */
+.main-slogan {
+    font-size: 2.5rem;              /* увеличили размер */
+    color: #fff;
+    margin: 20px 0 50px 0;
+    font-weight: 300;                /* тонкий шрифт */
+    text-shadow: 0 0 15px rgba(102, 126, 234, 0.5);  /* свечение */
+    letter-spacing: 2px;              /* расстояние между буквами */
+    line-height: 1.4;                 /* межстрочный интервал */
+    background: linear-gradient(135deg, #fff, #e0e0ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;  /* градиентный текст */
+    animation: glow 3s infinite;        /* анимация свечения */
+}
+
+/* Анимация свечения */
+@keyframes glow {
+    0% { text-shadow: 0 0 10px rgba(102, 126, 234, 0.3); }
+    50% { text-shadow: 0 0 25px rgba(102, 126, 234, 0.8); }
+    100% { text-shadow: 0 0 10px rgba(102, 126, 234, 0.3); }
+}
+/* Основной контент */
+.main-content {
+    display: grid;
+    grid-template-columns: 1fr 450px;
+    gap: 60px;
+    margin-top: 20px;
+}
+
+/* Левая панель */
+.left-panel {
+    background: transparent;
+    padding: 0;
+}
+
+.name-input-container {
+    margin-bottom: 20px;
+}
+
+.name-input {
+    width: 100%;
+    padding: 18px 25px;
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    font-size: 1.3rem;
+    backdrop-filter: blur(10px);
+}
+
+.name-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.divider {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 25px 0;
+    font-size: 1.2rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.btn {
+    border: none;
+    border-radius: 15px;
+    padding: 25px;
+    font-size: 1.8rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.3s, box-shadow 0.3s;
+    width: 100%;
+    margin: 15px 0;
+    backdrop-filter: blur(10px);
+}
+
+.btn-primary {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 25px 20px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s;
+}
+
+.btn-primary:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.btn-subtext {
+    font-size: 1.2rem;
+    opacity: 0.8;
+    margin-top: 8px;
+}
+
+.join-section {
+    display: flex;
+    gap: 15px;
+    margin: 25px 0;
+}
+
+.room-input {
+    flex: 2;
+    padding: 18px 25px;
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    font-size: 1.2rem;
+    backdrop-filter: blur(10px);
+}
+
+.room-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.btn-join {
+    flex: 1;
+    background: rgba(118, 75, 162, 0.3);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    font-size: 1.3rem;
+    padding: 18px;
+    backdrop-filter: blur(10px);
+    cursor: pointer;
+    border-radius: 15px;
+}
+
+.btn-join:hover {
+    background: rgba(118, 75, 162, 0.5);
+    transform: translateY(-2px);
+}
+
+.features {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 50px;
+    gap: 20px;
+}
+
+.feature-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 1rem;
+}
+
+.feature-icon {
+    font-size: 2.2rem;
+    background: rgba(255, 255, 255, 0.1);
+    width: 60px;
+    height: 60px;
+    border-radius: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+    margin-bottom: 5px;
+}
+
+/* Правая панель */
+.right-panel {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 25px;
+    padding: 30px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    height: fit-content;
+    width: 100%;
+    /* Добавляем верхний отступ внутри */
+    padding-top: 40px;           /* увеличит верхнюю часть */
+    /* Сдвигаем весь блок вверх */
+    margin-top: -50px;           /* отрицательный отступ тянет вверх */
+}
+.rating-title {
+    font-size: 1.8rem;
+    margin-bottom: 25px;
+    color: #fff;
+    font-weight: 500;
+}
+
+.rating-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.rating-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    transition: background 0.3s;
+}
+
+.rating-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.rating-position {
+    color: #764ba2;
+    font-weight: bold;
+    font-size: 1.2rem;
+    min-width: 35px;
+}
+
+.player-name {
+    flex: 1;
+    font-weight: bold;
+    color: #fff;
+    font-size: 1.2rem;
+}
+
+.player-stars {
+    color: #ffd700;
+    letter-spacing: 3px;
+    font-size: 1.2rem;
+}
+
+.player-rating {
+    color: #667eea;
+    font-weight: bold;
+    font-size: 1.2rem;
+    min-width: 50px;
+    text-align: right;
+}
+
+/* Адаптация для телефонов */
+@media (max-width: 768px) {
+    .main-content {
+        grid-template-columns: 1fr;
+        gap: 30px;
+    }
+    
+    .logo {
+        font-size: 3rem;
+    }
+    
+    .main-slogan {
+        font-size: 1.5rem;
+    }
+    
+    .join-section {
+        flex-direction: column;
+    }
+    
+    .features {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .right-panel {
+        margin-left: 0;
+        width: 100%;
+    }
+}
+
+/* ===== СТИЛИ ДЛЯ ЛОББИ ===== */
+
+/* Код комнаты по центру */
+.room-code-center {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0 40px 0;
+}
+
+.code-box {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 15px 30px;
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.code-box span {
+    font-size: 2.5rem;
+    font-weight: bold;
+    letter-spacing: 8px;
+    color: #fff;
+    text-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+}
+
+.copy-btn {
+    background: rgba(102, 126, 234, 0.3);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 10px 25px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    backdrop-filter: blur(5px);
+    transition: all 0.3s;
+}
+
+.copy-btn:hover {
+    background: rgba(102, 126, 234, 0.5);
+    transform: translateY(-2px);
+}
+
+/* Сетка лобби */
+.lobby-grid {
+    display: grid;
+    grid-template-columns: 0.8fr 1.2fr;  /* левая колонка уже */
+    gap: 30px;
+    margin-bottom: 40px;
+}
+
+/* Левая колонка - участники */
+.players-column {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 20px;
+    padding: 20px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.players-section h2 {
+    font-size: 1.5rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 20px;
+}
+
+.players-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+.player-card {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s;
+}
+
+.player-card:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateX(5px);
+}
+
+.player-avatar {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.players-list .player-name {
+    font-size: 1.2rem;
+    color: #fff;
+}
+
+/* Правая колонка - чат */
+.chat-column {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 20px;
+    padding: 20px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.chat-section {
+    display: flex;
+    flex-direction: column;
+    height: 400px;
+}
+
+.chat-section h2 {
+    font-size: 1.5rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 15px;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 15px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.chat-message {
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    border-left: 3px solid #667eea;
+}
+
+.message-sender {
+    font-weight: bold;
+    color: #764ba2;
+    margin-right: 8px;
+}
+
+.message-time {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.chat-input-area {
+    display: flex;
+    gap: 10px;
+}
+
+.chat-input {
+    flex: 1;
+    padding: 12px 15px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    font-size: 1rem;
+    backdrop-filter: blur(5px);
+}
+
+.chat-send-btn {
+    width: 50px;
+    height: 50px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.chat-send-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(102, 126, 234, 0.5);
+}
+
+/* Секция с играми внизу */
+.games-section {
+    margin-top: 20px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.games-section h2 {
+    font-size: 1.5rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 20px;
+}
+
+.games-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.game-btn {
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 20px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    backdrop-filter: blur(5px);
+    transition: all 0.3s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.game-btn:hover {
+    background: rgba(102, 126, 234, 0.2);
+    transform: translateY(-3px);
+    border-color: rgba(102, 126, 234, 0.5);
+}
+
+.game-btn.selected {
+    background: rgba(102, 126, 234, 0.3);
+    border-color: #667eea;
+    box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+}
+
+.game-icon {
+    font-size: 2rem;
+}
+
+.start-game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.start-game-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 15px 50px;
+    border-radius: 25px;
+    font-size: 1.3rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+    opacity: 0.5;
+}
+
+.start-game-btn:not(:disabled) {
+    opacity: 1;
+    box-shadow: 0 0 20px rgba(102, 126, 234, 0.5);
+}
+
+.start-game-btn:not(:disabled):hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 30px rgba(102, 126, 234, 0.8);
+}
+
+.start-game-btn:disabled {
+    cursor: not-allowed;
+}
+
+.selected-game-hint {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 1rem;
+}
+
+/* Скроллбар */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}

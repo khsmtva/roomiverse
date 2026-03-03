@@ -1,0 +1,178 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROOMIVERSE - Лобби</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+</head>
+<body>
+    <!-- Линия сверху -->
+    <div class="top-line"></div>
+
+    <div class="container">
+        <!-- ТОЛЬКО ROOMIVERSE с линиями -->
+        <div class="header-with-lines">
+            <h1 class="logo">ROOMIVERSE</h1>
+        </div>
+
+        <!-- Код комнаты по центру -->
+        <div class="room-code-center">
+            <div class="code-box">
+                <span id="roomCodeDisplay">------</span>
+                <button class="copy-btn" onclick="copyRoomCode()">📋 Копировать</button>
+            </div>
+        </div>
+
+        <!-- Основной контент лобби в две колонки -->
+        <div class="lobby-grid">
+            <!-- Левая колонка (участники) -->
+            <div class="players-column">
+                <div class="players-section">
+                    <h2>Участники</h2>
+                    <div class="players-list" id="playersList"></div>
+                </div>
+            </div>
+
+            <!-- Правая колонка (чат) -->
+            <div class="chat-column">
+                <div class="chat-section">
+                    <h2>Чат</h2>
+                    <div class="chat-messages" id="chatMessages"></div>
+                    <div class="chat-input-area">
+                        <input type="text" class="chat-input" id="chatInput" 
+                               placeholder="Введите сообщение..." onkeypress="checkEnter(event)">
+                        <button class="chat-send-btn" onclick="sendMessage()">➤</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Кнопки выбора игры внизу -->
+        <div class="games-section">
+            <h2>Выберите игру</h2>
+            <div class="games-buttons">
+                <button class="game-btn" onclick="selectGame('tic_tac_toe')">
+                    <span class="game-icon">❌⭕</span>
+                    Крестики-нолики
+                </button>
+                <button class="game-btn" onclick="selectGame('word_guess')">
+                    <span class="game-icon">🔤</span>
+                    Угадай слово
+                </button>
+                <button class="game-btn" onclick="selectGame('sea_battle')">
+                    <span class="game-icon">⚓</span>
+                    Морской бой
+                </button>
+            </div>
+            
+            <!-- Кнопка начать игру -->
+            <div class="start-game-container">
+                <button class="start-game-btn" id="startGameBtn" onclick="startGame()" disabled>
+                    Начать игру
+                </button>
+                <p class="selected-game-hint" id="selectedGameHint">Выберите игру</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomCode = urlParams.get('code');
+        const playerName = localStorage.getItem('playerName');
+        let selectedGame = null;
+        
+        document.getElementById('roomCodeDisplay').textContent = roomCode;
+        
+        const socket = io();
+        
+        socket.emit('join_room', {
+            room_code: roomCode,
+            name: playerName
+        });
+        
+        socket.on('players_update', (data) => {
+            const playersList = document.getElementById('playersList');
+            playersList.innerHTML = '';
+            
+            data.players.forEach(player => {
+                const firstLetter = player.charAt(0).toUpperCase();
+                playersList.innerHTML += `
+                    <div class="player-card">
+                        <div class="player-avatar">${firstLetter}</div>
+                        <span class="player-name">${player}</span>
+                    </div>
+                `;
+            });
+        });
+        
+        socket.on('new_message', (data) => {
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.innerHTML += `
+                <div class="chat-message">
+                    <span class="message-sender">${data.sender}</span>
+                    <span class="message-time">${data.time}</span>
+                    <div>${data.message}</div>
+                </div>
+            `;
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+        
+        function selectGame(gameType) {
+            selectedGame = gameType;
+            
+            // Подсвечиваем выбранную кнопку
+            document.querySelectorAll('.game-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+            
+            // Активируем кнопку "Начать игру"
+            document.getElementById('startGameBtn').disabled = false;
+            
+            // Показываем какая игра выбрана
+            const gameNames = {
+                'tic_tac_toe': 'Крестики-нолики',
+                'word_guess': 'Угадай слово',
+                'sea_battle': 'Морской бой'
+            };
+            document.getElementById('selectedGameHint').textContent = 'Выбрано: ' + gameNames[gameType];
+        }
+        
+        function startGame() {
+            if (selectedGame) {
+                socket.emit('start_game', {
+                    room_code: roomCode,
+                    game_type: selectedGame
+                });
+                alert('Игра ' + selectedGame + ' запускается...');
+            }
+        }
+        
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (message) {
+                socket.emit('send_message', {
+                    room_code: roomCode,
+                    message: message
+                });
+                input.value = '';
+            }
+        }
+        
+        function checkEnter(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+        
+        function copyRoomCode() {
+            navigator.clipboard.writeText(roomCode);
+            alert('Код скопирован в буфер обмена');
+        }
+    </script>
+</body>
+</html>
