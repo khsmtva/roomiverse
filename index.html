@@ -1,0 +1,168 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROOMIVERSE</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- ТОЛЬКО ROOMIVERSE обведен линиями -->
+        <div class="header-with-lines">
+            <h1 class="logo">ROOMIVERSE</h1>
+        </div>
+        
+        <!-- Слоган отдельно, без линий -->
+        <p class="main-slogan">Исследуй игровые миры с друзьями!</p>
+
+        <!-- Основной контент -->
+        <div class="main-content">
+            <!-- Левая колонка -->
+            <div class="left-panel">
+                <div class="name-input-container">
+                    <input type="text" class="name-input" id="playerName" 
+                           placeholder="Введите ваше имя">
+                </div>
+                
+                <div class="divider">или</div>
+                
+                <button class="btn btn-primary" onclick="createRoom()">
+                    Создать комнату
+                    <span class="btn-subtext">Старт путешествия!</span>
+                </button>
+                
+                <div class="join-section">
+                    <input type="text" class="room-input" id="roomCode" 
+                           placeholder="Введи код комнаты">
+                    <button class="btn-join" onclick="joinRoom()">
+                        Подключиться
+                    </button>
+                </div>
+                
+                <div class="features">
+                    <div class="feature-item">
+                        <span class="feature-icon">🎮</span>
+                        <span>Выбирай игры</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">⚔️</span>
+                        <span>Соревнуйся</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">📈</span>
+                        <span>Поднимайся в рейтинге</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Правая колонка с рейтингом -->
+            <div class="right-panel">
+                <h2 class="rating-title">Рейтинг игроков</h2>
+                <div class="rating-list" id="ratingList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let playerName = '';
+        
+        const mockRating = [
+            { name: 'Nova', rating: 1580, stars: 5 },
+            { name: 'Astro', rating: 1520, stars: 4 },
+            { name: 'Luna', rating: 1475, stars: 4 },
+            { name: 'Comet', rating: 1410, stars: 4 },
+            { name: 'Photon', rating: 1390, stars: 4 }
+        ];
+        
+        function getStars(count) {
+            return '★'.repeat(count) + '☆'.repeat(5 - count);
+        }
+        
+        function displayRating() {
+            const list = document.getElementById('ratingList');
+            list.innerHTML = '';
+            mockRating.forEach((player, index) => {
+                list.innerHTML += `
+                    <div class="rating-item">
+                        <span class="rating-position">${index + 1}.</span>
+                        <span class="player-name">${player.name}</span>
+                        <span class="player-stars">${getStars(player.stars)}</span>
+                        <span class="player-rating">${player.rating}</span>
+                    </div>
+                `;
+            });
+        }
+        
+        displayRating();
+        
+        async function createRoom() {
+            const name = document.getElementById('playerName').value.trim();
+            if (!name) {
+                alert('Введите ваше имя');
+                return;
+            }
+            
+            playerName = name;
+            
+            try {
+                const response = await fetch('/api/create_room', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    localStorage.setItem('playerName', name);
+                    window.location.href = '/lobby?code=' + data.room_code;
+                } else {
+                    alert('Ошибка: ' + data.message);
+                }
+            } catch (error) {
+                alert('Ошибка подключения к серверу');
+            }
+        }
+        
+        async function joinRoom() {
+            const name = document.getElementById('playerName').value.trim();
+            const code = document.getElementById('roomCode').value.trim().toUpperCase();
+            
+            if (!name) {
+                alert('Введите ваше имя');
+                return;
+            }
+            
+            if (!code) {
+                alert('Введите код комнаты');
+                return;
+            }
+            
+            playerName = name;
+            
+            try {
+                const response = await fetch('/api/join_room', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        room_code: code,
+                        name: name 
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    localStorage.setItem('playerName', name);
+                    window.location.href = '/lobby?code=' + code;
+                } else {
+                    alert('Ошибка: ' + data.message);
+                }
+            } catch (error) {
+                alert('Ошибка подключения к серверу');
+            }
+        }
+    </script>
+</body>
+</html>
