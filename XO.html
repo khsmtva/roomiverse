@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -10,12 +9,10 @@
 </head>
 <body>
     <div class="container game-page">
-        <!-- Шапка с логотипом (как на главной) -->
         <div class="header-with-lines">
             <h1 class="logo">ROOMIVERSE</h1>
         </div>
 
-        <!-- Информация о комнате -->
         <div class="game-header">
             <div class="room-info">
                 <span class="room-label">Комната</span>
@@ -25,7 +22,6 @@
             <a href="/lobby?code={{ room_code }}" class="back-to-lobby">← В лобби</a>
         </div>
 
-        <!-- Игроки -->
         <div class="players-status">
             <div class="player-card-small player-x" id="playerXCard">
                 <div class="player-symbol-small">X</div>
@@ -44,7 +40,6 @@
             </div>
         </div>
 
-        <!-- Игровое поле -->
         <div class="game-board-container">
             <div class="game-stats">
                 <span class="turn-indicator" id="turnIndicator">Ход: X</span>
@@ -53,13 +48,11 @@
             <div class="game-board" id="gameBoard"></div>
         </div>
 
-        <!-- Кнопки -->
         <div class="game-actions">
             <button class="game-action-btn restart-btn" onclick="restartGame()">🔄 Новая игра</button>
             <button class="game-action-btn surrender-btn" onclick="surrender()">🏳️ Сдаться</button>
         </div>
 
-        <!-- Чат -->
         <div class="compact-chat">
             <div class="compact-chat-header" onclick="toggleChat()">
                 <span>💬 Чат</span>
@@ -84,13 +77,11 @@
         
         const socket = io();
         
-        // Подключаемся к комнате
         socket.emit('join_room', {
             room_code: roomCode,
             name: playerName
         });
         
-        // Загружаем состояние игры
         function loadGameState() {
             fetch(`/api/game_state/${roomCode}`)
                 .then(response => response.json())
@@ -100,14 +91,12 @@
                 });
         }
         
-        // Обновляем отображение
         function updateGameDisplay(data) {
             renderBoard(data.board);
             
             document.getElementById('turnIndicator').innerHTML = `Ход: ${data.current_player.symbol}`;
             document.getElementById('movesCounter').innerHTML = `Ходов: ${data.move_count}`;
             
-            // Подсвечиваем активного игрока
             if (data.current_player.id === 'p1') {
                 document.getElementById('playerXCard').classList.add('active');
                 document.getElementById('playerOCard').classList.remove('active');
@@ -128,7 +117,6 @@
             }
         }
         
-        // Рисуем поле 9x9
         function renderBoard(board) {
             const boardDiv = document.getElementById('gameBoard');
             boardDiv.innerHTML = '';
@@ -155,7 +143,6 @@
             }
         }
         
-        // Делаем ход
         function makeMove(row, col) {
             if (gameOver) {
                 alert('Игра уже закончена!');
@@ -182,7 +169,6 @@
             });
         }
         
-        // Показываем результат
         function showGameResult(data) {
             setTimeout(() => {
                 const modal = document.createElement('div');
@@ -232,7 +218,6 @@
             alert('Код скопирован: ' + roomCode);
         }
         
-        // Чат
         function toggleChat() {
             const chatBody = document.getElementById('compactChatBody');
             const toggle = document.querySelector('.chat-toggle');
@@ -271,13 +256,12 @@
         });
         
         socket.on('players_update', (data) => {
-            if (data.players.length >= 2) {
+            if (data.players && data.players.length >= 2) {
                 document.getElementById('playerXName').textContent = data.players[0];
                 document.getElementById('playerOName').textContent = data.players[1];
             }
         });
         
-        // Загружаем игру
         loadGameState();
         setInterval(loadGameState, 2000);
     </script>
