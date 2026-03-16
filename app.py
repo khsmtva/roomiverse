@@ -402,10 +402,10 @@ def handle_send_message(data):
 
 if __name__ == '__main__':
     print('\n' + '='*60)
-    print('🚀 ROOMIVERSE - СЕРВЕР ЗАПУЩЕН')
+    print(' ROOMIVERSE - СЕРВЕР ЗАПУЩЕН')
     print('='*60)
-    print('📱 Главная страница: http://localhost:5000')
-    print('🎮 Крестики-нолики 9x9 готовы')
+    print(' Главная страница: http://localhost:5000')
+    print(' Крестики-нолики 9x9 готовы')
     print('='*60 + '\n')
     socketio.run(app, debug=True, host='0.0.0.0', port=5000)
 >>>>>>> 16e72172fb4add6aea8900164bd37c00111d2e00
