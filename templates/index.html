@@ -5,15 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ROOMIVERSE</title>
     <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
 </head>
 <body>
+    <!-- Линия сверху -->
+    <div class="top-line"></div>
+
     <div class="container">
-        <!-- ТОЛЬКО ROOMIVERSE обведен линиями -->
+        <!-- ТОЛЬКО ROOMIVERSE с линиями -->
         <div class="header-with-lines">
             <h1 class="logo">ROOMIVERSE</h1>
         </div>
-        
-        <!-- Слоган отдельно, без линий -->
+
+        <!-- Слоган -->
         <p class="main-slogan">Исследуй игровые миры с друзьями!</p>
 
         <!-- Основной контент -->
@@ -67,31 +71,26 @@
     <script>
         let playerName = '';
         
-        const mockRating = [
-            { name: 'Nova', rating: 1580, stars: 5 },
-            { name: 'Astro', rating: 1520, stars: 4 },
-            { name: 'Luna', rating: 1475, stars: 4 },
-            { name: 'Comet', rating: 1410, stars: 4 },
-            { name: 'Photon', rating: 1390, stars: 4 }
-        ];
-        
-        function getStars(count) {
-            return '★'.repeat(count) + '☆'.repeat(5 - count);
-        }
+        // Пока рейтинг пуст (будет загружаться из БД позже)
+        const mockRating = [];
         
         function displayRating() {
             const list = document.getElementById('ratingList');
             list.innerHTML = '';
-            mockRating.forEach((player, index) => {
-                list.innerHTML += `
-                    <div class="rating-item">
-                        <span class="rating-position">${index + 1}.</span>
-                        <span class="player-name">${player.name}</span>
-                        <span class="player-stars">${getStars(player.stars)}</span>
-                        <span class="player-rating">${player.rating}</span>
-                    </div>
-                `;
-            });
+            
+            if (mockRating.length === 0) {
+                list.innerHTML = '<div class="rating-empty">Пока нет игроков</div>';
+            } else {
+                mockRating.forEach((player, index) => {
+                    list.innerHTML += `
+                        <div class="rating-item">
+                            <span class="rating-position">${index + 1}.</span>
+                            <span class="player-name">${player.name}</span>
+                            <span class="player-rating">${player.rating}</span>
+                        </div>
+                    `;
+                });
+            }
         }
         
         displayRating();

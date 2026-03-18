@@ -6,7 +6,7 @@
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: url('https://i.pinimg.com/originals/22/db/6f/22db6feb176ed934f110c43d74895cc7.jpg') no-repeat center center fixed;
+    background: url('https://static.vecteezy.com/system/resources/previews/002/097/706/non_2x/3d-realistic-nebula-space-background-free-photo.jpg') no-repeat center center fixed;
     background-size: cover;
     min-height: 100vh;
     color: #fff;
@@ -40,15 +40,16 @@ body::before {
 /* Контейнер для ROOMIVERSE с линиями */
 .header-with-lines {
     position: relative;
-    margin-top: 10;              /* поднимает шапку в самый верх */
+    margin-top: 0;
     margin-bottom: 10px;
-    padding: 20px 0;
+    padding: 15px 0;
     border-top: 2px solid transparent;
     border-bottom: 2px solid transparent;
     border-image: linear-gradient(90deg, #667eea, #764ba2, #667eea);
     border-image-slice: 1;
     display: inline-block;
 }
+
 .logo {
     font-size: 4rem;
     font-weight: 800;
@@ -61,17 +62,17 @@ body::before {
 
 /* Слоган отдельно */
 .main-slogan {
-    font-size: 2.5rem;              /* увеличили размер */
+    font-size: 2.5rem;
     color: #fff;
     margin: 20px 0 50px 0;
-    font-weight: 300;                /* тонкий шрифт */
-    text-shadow: 0 0 15px rgba(102, 126, 234, 0.5);  /* свечение */
-    letter-spacing: 2px;              /* расстояние между буквами */
-    line-height: 1.4;                 /* межстрочный интервал */
+    font-weight: 500;
+    text-shadow: 0 0 15px rgba(102, 126, 234, 0.5);
+    letter-spacing: 2px;
+    line-height: 1.4;
     background: linear-gradient(135deg, #fff, #e0e0ff);
     -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;  /* градиентный текст */
-    animation: glow 3s infinite;        /* анимация свечения */
+    -webkit-text-fill-color: transparent;
+    animation: glow 3s infinite;
 }
 
 /* Анимация свечения */
@@ -80,6 +81,7 @@ body::before {
     50% { text-shadow: 0 0 25px rgba(102, 126, 234, 0.8); }
     100% { text-shadow: 0 0 10px rgba(102, 126, 234, 0.3); }
 }
+
 /* Основной контент */
 .main-content {
     display: grid;
@@ -235,11 +237,10 @@ body::before {
     border: 1px solid rgba(255, 255, 255, 0.1);
     height: fit-content;
     width: 100%;
-    /* Добавляем верхний отступ внутри */
-    padding-top: 40px;           /* увеличит верхнюю часть */
-    /* Сдвигаем весь блок вверх */
-    margin-top: -50px;           /* отрицательный отступ тянет вверх */
+    padding-top: 40px;
+    margin-top: -50px;
 }
+
 .rating-title {
     font-size: 1.8rem;
     margin-bottom: 25px;
@@ -295,37 +296,7 @@ body::before {
     text-align: right;
 }
 
-/* Адаптация для телефонов */
-@media (max-width: 768px) {
-    .main-content {
-        grid-template-columns: 1fr;
-        gap: 30px;
-    }
-    
-    .logo {
-        font-size: 3rem;
-    }
-    
-    .main-slogan {
-        font-size: 1.5rem;
-    }
-    
-    .join-section {
-        flex-direction: column;
-    }
-    
-    .features {
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-    
-    .right-panel {
-        margin-left: 0;
-        width: 100%;
-    }
-}
-
-=========== СТИЛИ ДЛЯ ЛОББИ ===============================================================================================
+/* ===== СТИЛИ ДЛЯ ЛОББИ ===== */
 
 /* Код комнаты по центру */
 .room-code-center {
@@ -373,7 +344,7 @@ body::before {
 /* Сетка лобби */
 .lobby-grid {
     display: grid;
-    grid-template-columns: 0.8fr 1.2fr;  /* левая колонка уже */
+    grid-template-columns: 0.8fr 1.2fr;
     gap: 30px;
     margin-bottom: 40px;
 }
@@ -614,6 +585,272 @@ body::before {
     font-size: 1rem;
 }
 
+/* ===== СТИЛИ ДЛЯ СТРАНИЦЫ ИГРЫ ===== */
+
+.game-page {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* Шапка игры */
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.game-logo {
+    font-size: 3rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #667eea, #764ba2, #ff6b6b, #4ecdc4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-size: 300% 300%;
+    animation: gradientFlow 5s ease infinite;
+}
+
+@keyframes gradientFlow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.lobby-btn {
+    color: #667eea;
+    text-decoration: none;
+    padding: 10px 20px;
+    background: rgba(102, 126, 234, 0.2);
+    border-radius: 10px;
+    transition: all 0.3s;
+}
+
+.lobby-btn:hover {
+    background: rgba(102, 126, 234, 0.4);
+    transform: translateY(-2px);
+}
+
+/* Игровое поле 9x9 */
+.game-board {
+    display: grid;
+    grid-template-columns: repeat(9, 50px);
+    gap: 5px;
+    justify-content: center;
+    margin: 20px auto;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 15px;
+    border-radius: 15px;
+    max-width: fit-content;
+}
+
+.game-cell {
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid #764ba2;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: white;
+}
+
+.game-cell:hover {
+    background: #667eea;
+    transform: scale(1.05);
+    border-color: white;
+    box-shadow: 0 0 20px #667eea;
+}
+
+.game-cell.x {
+    color: #ff6b6b;
+}
+
+.game-cell.o {
+    color: #4ecdc4;
+}
+
+/* Статус игроков в игре */
+.players-status {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 30px;
+    margin: 30px 0;
+}
+
+.players-status .player-card {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px 25px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    border: 2px solid transparent;
+    min-width: 200px;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s;
+}
+
+.players-status .player-card.active {
+    border-color: #667eea;
+    box-shadow: 0 0 20px rgba(102, 126, 234, 0.5);
+    background: rgba(102, 126, 234, 0.1);
+}
+
+.players-status .player-card.x-player.active {
+    border-color: #ff6b6b;
+    box-shadow: 0 0 20px #ff6b6b;
+}
+
+.players-status .player-card.o-player.active {
+    border-color: #4ecdc4;
+    box-shadow: 0 0 20px #4ecdc4;
+}
+
+.players-status .player-avatar {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.players-status .x-player .player-avatar {
+    background: linear-gradient(135deg, #ff6b6b, #ff8e53);
+}
+
+.players-status .o-player .player-avatar {
+    background: linear-gradient(135deg, #4ecdc4, #45b7d1);
+}
+
+.players-status .player-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.players-status .player-name {
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.players-status .player-status {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.vs-divider {
+    font-size: 24px;
+    font-weight: bold;
+    color: #667eea;
+    text-shadow: 0 0 10px #667eea;
+}
+
+/* Статистика игры */
+.game-stats-panel {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 20px 0;
+    padding: 15px 25px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+}
+
+.turn-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.turn-indicator {
+    font-size: 1.2rem;
+    color: #667eea;
+}
+
+.x-turn {
+    color: #ff6b6b;
+    text-shadow: 0 0 10px #ff6b6b;
+}
+
+.o-turn {
+    color: #4ecdc4;
+    text-shadow: 0 0 10px #4ecdc4;
+}
+
+.player-moves {
+    display: flex;
+    gap: 20px;
+}
+
+.player-move-count {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.x-moves {
+    color: #ff6b6b;
+}
+
+.o-moves {
+    color: #4ecdc4;
+}
+
+/* Кнопки действий */
+.game-actions {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin: 30px 0;
+}
+
+.game-actions .action-btn {
+    padding: 12px 30px;
+    border: none;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.game-actions .action-btn:hover {
+    background: rgba(102, 126, 234, 0.3);
+    transform: translateY(-2px);
+    border-color: #667eea;
+}
+
+.game-actions .action-btn.restart {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+/* Чат на странице игры */
+.game-chat {
+    margin-top: 30px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+    padding: 20px;
+}
+
+.chat-title {
+    font-size: 1.3rem;
+    margin-bottom: 15px;
+    color: #667eea;
+}
+
 /* Скроллбар */
 ::-webkit-scrollbar {
     width: 8px;
@@ -633,330 +870,52 @@ body::before {
     background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
 }
 
-/* ===== СТИЛИ ДЛЯ СТРАНИЦЫ ИГРЫ ===== */
-
-.game-page {
-    max-width: 900px;
-}
-
-/* Игровое поле */
-.game-board-container {
-    background: rgba(10, 10, 26, 0.8);
-    border: 2px solid #667eea;
-    border-radius: 20px;
-    padding: 30px;
-    margin: 30px 0;
-    box-shadow: 0 0 40px rgba(102, 126, 234, 0.3);
-    backdrop-filter: blur(10px);
-}
-
-.game-stats {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 20px;
-    font-size: 18px;
-    color: white;
-}
-
-.turn-indicator {
-    color: #667eea;
-    text-shadow: 0 0 10px #667eea;
-}
-
-.moves-counter {
-    color: #764ba2;
-}
-
-.game-board {
-    display: grid;
-    grid-template-columns: repeat(9, 1fr);
-    gap: 5px;
-    background: rgba(0, 0, 0, 0.3);
-    padding: 20px;
-    border-radius: 15px;
-}
-
-.game-cell {
-    aspect-ratio: 1;
-    background: rgba(20, 20, 40, 0.9);
-    border: 2px solid #764ba2;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.3s;
-    color: white;
-}
-
-.game-cell:hover {
-    background: #667eea;
-    border-color: white;
-    transform: scale(1.1);
-    box-shadow: 0 0 20px #667eea;
-    z-index: 2;
-}
-
-.game-cell.x {
-    color: #667eea;
-    text-shadow: 0 0 15px #667eea;
-}
-
-.game-cell.o {
-    color: #764ba2;
-    text-shadow: 0 0 15px #764ba2;
-}
-
-/* Статус игроков на странице игры */
-.players-status {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 30px;
-    margin: 30px 0;
-}
-
-.players-status .player-card {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    padding: 20px;
-    min-width: 200px;
-    border: 2px solid transparent;
-    transition: all 0.3s;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 15px;
-    backdrop-filter: blur(10px);
-}
-
-.players-status .player-card.active {
-    border-color: #667eea;
-    box-shadow: 0 0 30px #667eea;
-    background: rgba(102, 126, 234, 0.1);
-}
-
-.players-status .player-card.player-o.active {
-    border-color: #764ba2;
-    box-shadow: 0 0 30px #764ba2;
-}
-
-.players-status .player-avatar {
-    width: 60px;
-    height: 60px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 30px;
-}
-
-.players-status .player-card.player-o .player-avatar {
-    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-}
-
-.game-actions {
-    display: flex;
-    gap: 20px;
-    justify-content: center;
-    margin: 30px 0;
-}
-
-.game-actions .btn-primary,
-.game-actions .btn-join {
-    width: auto;
-    padding: 15px 40px;
-    font-size: 1.2rem;
-}
-
-.game-actions a.btn-join {
-    text-decoration: none;
-    text-align: center;
-    background: rgba(102, 126, 234, 0.3);
-}
-
-.game-actions a.btn-join:hover {
-    background: rgba(102, 126, 234, 0.5);
-}
-
-/* Компактный чат */
-.compact-chat {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    width: 300px;
-    background: rgba(20, 20, 30, 0.95);
-    border: 2px solid #764ba2;
-    border-radius: 15px;
-    overflow: hidden;
-    box-shadow: 0 0 30px rgba(118, 75, 162, 0.5);
-    z-index: 100;
-    backdrop-filter: blur(10px);
-}
-
-.compact-chat-header {
-    padding: 12px 15px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.compact-chat-body {
-    transition: max-height 0.3s;
-}
-
-.compact-chat-body.hidden {
-    display: none;
-}
-
-.compact-chat-messages {
-    height: 200px;
-    overflow-y: auto;
-    padding: 15px;
-    background: rgba(0, 0, 0, 0.3);
-}
-
-.compact-message {
-    margin-bottom: 10px;
-    font-size: 14px;
-    color: rgba(255, 255, 255, 0.8);
-}
-
-.compact-sender {
-    color: #667eea;
-    font-weight: bold;
-    margin-right: 5px;
-}
-
-.compact-chat-input-area {
-    display: flex;
-    padding: 10px;
-    gap: 5px;
-    background: rgba(0, 0, 0, 0.5);
-}
-
-.compact-chat-input {
-    flex: 1;
-    padding: 8px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid #667eea;
-    border-radius: 5px;
-    color: white;
-}
-
-.compact-chat-input::placeholder {
-    color: rgba(255, 255, 255, 0.5);
-}
-
-.compact-chat-send {
-    background: #764ba2;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    padding: 8px 12px;
-    cursor: pointer;
-}
-
-.compact-chat-send:hover {
-    background: #667eea;
-}
-
-/* Модальное окно для результата игры */
-.modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.9);
-    backdrop-filter: blur(5px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-}
-
-.modal-content {
-    background: rgba(20, 20, 30, 0.95);
-    padding: 40px;
-    border-radius: 30px;
-    border: 3px solid #667eea;
-    text-align: center;
-    max-width: 400px;
-    width: 90%;
-    animation: slideUp 0.5s;
-    backdrop-filter: blur(10px);
-}
-
-.winner-emoji {
-    font-size: 80px;
-    margin-bottom: 20px;
-    animation: bounce 1s infinite;
-}
-
-.winner-name {
-    font-size: 36px;
-    color: #667eea;
-    margin: 20px 0;
-    text-shadow: 0 0 20px #667eea;
-}
-
-.modal-buttons {
-    display: flex;
-    gap: 15px;
-    justify-content: center;
-    margin-top: 30px;
-}
-
-.modal-btn {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 25px;
-    font-size: 16px;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.modal-btn:first-child {
-    background: #667eea;
-    color: white;
-}
-
-.modal-btn.secondary {
-    background: transparent;
-    border: 2px solid #764ba2;
-    color: #764ba2;
-}
-
-.modal-btn.secondary:hover {
-    background: #764ba2;
-    color: white;
-}
-
-@keyframes bounce {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.2); }
-}
-
-@keyframes slideUp {
-    from {
-        transform: translateY(50px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
 /* Адаптивность */
 @media (max-width: 768px) {
+    .main-content {
+        grid-template-columns: 1fr;
+        gap: 30px;
+    }
+    
+    .logo {
+        font-size: 3rem;
+    }
+    
+    .main-slogan {
+        font-size: 1.5rem;
+    }
+    
+    .join-section {
+        flex-direction: column;
+    }
+    
+    .features {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .right-panel {
+        margin-left: 0;
+        width: 100%;
+    }
+    
+    .lobby-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .game-board {
+        grid-template-columns: repeat(9, 35px);
+        gap: 3px;
+        padding: 10px;
+    }
+    
+    .game-cell {
+        width: 35px;
+        height: 35px;
+        font-size: 18px;
+    }
+    
     .players-status {
         flex-direction: column;
         gap: 15px;
@@ -966,17 +925,9 @@ body::before {
         width: 100%;
     }
     
-    .game-board {
-        gap: 3px;
-        padding: 10px;
-    }
-    
-    .game-cell {
-        font-size: 14px;
-    }
-    
-    .compact-chat {
-        width: 250px;
+    .game-stats-panel {
+        flex-direction: column;
+        gap: 10px;
     }
     
     .game-actions {
@@ -986,11 +937,13 @@ body::before {
 
 @media (max-width: 480px) {
     .game-board {
-        grid-template-columns: repeat(9, minmax(25px, 1fr));
+        grid-template-columns: repeat(9, 28px);
         gap: 2px;
     }
     
     .game-cell {
-        font-size: 12px;
+        width: 28px;
+        height: 28px;
+        font-size: 14px;
     }
 }

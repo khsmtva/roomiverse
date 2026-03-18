@@ -8,6 +8,25 @@
     <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
 </head>
 <body>
+    <!-- СТИЛИ ДЛЯ ФОНА -->
+    <style>
+        body {
+            background: url('https://static.vecteezy.com/system/resources/previews/002/097/706/non_2x/3d-realistic-nebula-space-background-free-photo.jpg') no-repeat center center fixed;
+            background-size: cover;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 10, 26, 0.6);
+            z-index: -1;
+        }
+    </style>
+
     <!-- Линия сверху -->
     <div class="top-line"></div>
 
@@ -53,15 +72,15 @@
         <div class="games-section">
             <h2>Выберите игру</h2>
             <div class="games-buttons">
-                <button class="game-btn" onclick="selectGame('tic_tac_toe')">
+                <button class="game-btn" onclick="selectGame('tic_tac_toe', event)">
                     <span class="game-icon">❌⭕</span>
                     Крестики-нолики
                 </button>
-                <button class="game-btn" onclick="selectGame('word_guess')">
+                <button class="game-btn" onclick="selectGame('word_guess', event)">
                     <span class="game-icon">🔤</span>
                     Угадай слово
                 </button>
-                <button class="game-btn" onclick="selectGame('sea_battle')">
+                <button class="game-btn" onclick="selectGame('sea_battle', event)">
                     <span class="game-icon">⚓</span>
                     Морской бой
                 </button>
@@ -96,37 +115,46 @@
             const playersList = document.getElementById('playersList');
             playersList.innerHTML = '';
             
-            data.players.forEach(player => {
-                const firstLetter = player.charAt(0).toUpperCase();
-                playersList.innerHTML += `
-                    <div class="player-card">
-                        <div class="player-avatar">${firstLetter}</div>
-                        <span class="player-name">${player}</span>
-                    </div>
-                `;
-            });
+            if (data.players && data.players.length > 0) {
+                data.players.forEach(player => {
+                    const firstLetter = player.charAt(0).toUpperCase();
+                    playersList.innerHTML += `
+                        <div class="player-card">
+                            <div class="player-avatar">${firstLetter}</div>
+                            <span class="player-name">${player}</span>
+                        </div>
+                    `;
+                });
+            } else {
+                playersList.innerHTML = '<div class="player-card">Ожидание игроков...</div>';
+            }
         });
         
         socket.on('new_message', (data) => {
             const chatMessages = document.getElementById('chatMessages');
+            
+            // Форматируем время
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            
             chatMessages.innerHTML += `
                 <div class="chat-message">
                     <span class="message-sender">${data.sender}</span>
-                    <span class="message-time">${data.time}</span>
+                    <span class="message-time">${timeStr}</span>
                     <div>${data.message}</div>
                 </div>
             `;
             chatMessages.scrollTop = chatMessages.scrollHeight;
         });
         
-        function selectGame(gameType) {
+        function selectGame(gameType, evt) {
             selectedGame = gameType;
             
             // Подсвечиваем выбранную кнопку
             document.querySelectorAll('.game-btn').forEach(btn => {
                 btn.classList.remove('selected');
             });
-            event.currentTarget.classList.add('selected');
+            evt.currentTarget.classList.add('selected');
             
             // Активируем кнопку "Начать игру"
             document.getElementById('startGameBtn').disabled = false;
@@ -141,13 +169,29 @@
         }
         
         function startGame() {
-            if (selectedGame) {
-                socket.emit('start_game', {
-                    room_code: roomCode,
-                    game_type: selectedGame
-                });
-                alert('Игра ' + selectedGame + ' запускается...');
+            if (!selectedGame) {
+                alert('Сначала выберите игру');
+                return;
             }
+            
+            // Отправляем запрос на сервер для запуска игры
+            fetch(`/api/start_game/${roomCode}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ game_type: selectedGame })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Переходим на страницу игры
+                    window.location.href = `/game/${roomCode}`;
+                } else {
+                    alert('Ошибка: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Ошибка соединения с сервером');
+            });
         }
         
         function sendMessage() {

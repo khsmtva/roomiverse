@@ -1,0 +1,325 @@
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <cstring>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <ctime>
+
+using namespace std;
+
+// ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
+
+void clearScreen() {
+    system("clear"); // Очистка экрана в терминале
+}
+
+void waitForKey() {
+    cout << "\nНажмите Enter для продолжения...";
+    cin.ignore();
+    cin.get();
+}
+
+// ========== СПРАВКА ==========
+
+void showHelp() {
+    clearScreen();
+    cout << "Режимы работы:" << endl;
+    cout << "  1. Интерактивный режим (меню)" << endl;
+    cout << "  2. Командная строка с ключами" << endl;
+    cout << endl;
+    cout << "Ключи командной строки:" << endl;
+    cout << "  --help          - показать эту справку" << endl;
+    cout << "  cp file1 file2  - копировать file1 в file2" << endl;
+    cout << "  mv file1 file2  - переместить file1 в file2" << endl;
+    cout << "  info file       - показать информацию о file" << endl;
+    cout << "  chmod file 755  - изменить права file на 755" << endl;
+    cout << endl;
+    cout << "Примеры:" << endl;
+    cout << "  ./lab2 --help" << endl;
+    cout << "  ./lab2 cp test.txt test_copy.txt" << endl;
+    cout << "  ./lab2 info test.txt" << endl;
+    cout << "=========================================" << endl;
+}
+
+// ========== ФУНКЦИЯ ДЛЯ КОПИРОВАНИЯ ФАЙЛОВ ==========
+
+void copyFile(string source = "", string dest = "") {
+    // Если имена не переданы как аргументы - запрашиваем
+    if (source.empty()) {
+        cout << "Введите имя исходного файла: ";
+        cin >> source;
+    }
+    if (dest.empty()) {
+        cout << "Введите имя файла-копии: ";
+        cin >> dest;
+    }
+
+    // Проверка, что имена разные
+    if (source == dest) {
+        cout << "ОШИБКА: имена файлов должны быть разными!" << endl;
+        return;
+    }
+
+    // Открываем исходный файл для чтения
+    ifstream src(source, ios::binary);
+    if (!src.is_open()) {
+        cout << "ОШИБКА: не удалось открыть файл '" << source << "'" << endl;
+        return;
+    }
+
+    // Открываем файл назначения для записи
+    ofstream dst(dest, ios::binary);
+    if (!dst.is_open()) {
+        cout << "ОШИБКА: не удалось создать файл '" << dest << "'" << endl;
+        src.close();
+        return;
+    }
+
+    // Буфер для чтения (4 КБ = 4096 байт)
+    // Используем маленький буфер, чтобы не загружать память
+    const int BUFFER_SIZE = 4096;
+    char buffer[BUFFER_SIZE];
+
+    cout << "Копирование файла..." << endl;
+
+    // Читаем блоками и сразу записываем
+    int totalBytes = 0;
+    while (!src.eof()) {
+        src.read(buffer, BUFFER_SIZE);
+        int bytesRead = src.gcount(); // сколько реально прочитали
+        if (bytesRead > 0) {
+            dst.write(buffer, bytesRead);
+            totalBytes += bytesRead;
+        }
+    }
+
+    cout << "ГОТОВО! Скопировано " << totalBytes << " байт" << endl;
+
+    src.close();
+    dst.close();
+}
+
+// ========== ФУНКЦИЯ ДЛЯ ПЕРЕМЕЩЕНИЯ/ПЕРЕИМЕНОВАНИЯ ==========
+
+void moveFile(string oldname = "", string newname = "") {
+    if (oldname.empty()) {
+        cout << "Введите текущее имя файла: ";
+        cin >> oldname;
+    }
+    if (newname.empty()) {
+        cout << "Введите новое имя или путь: ";
+        cin >> newname;
+    }
+
+    // rename - стандартная функция Linux для переименования/перемещения
+    if (rename(oldname.c_str(), newname.c_str()) == 0) {
+        cout << "ГОТОВО! Файл перемещён/переименован" << endl;
+    } else {
+        cout << "ОШИБКА при перемещении!" << endl;
+        perror("rename"); // покажет причину ошибки
+    }
+}
+
+// ========== ФУНКЦИЯ ДЛЯ ПОЛУЧЕНИЯ ИНФОРМАЦИИ О ФАЙЛЕ ==========
+
+void fileInfo(string filename = "") {
+    if (filename.empty()) {
+        cout << "Введите имя файла: ";
+        cin >> filename;
+    }
+
+    struct stat st;
+    if (stat(filename.c_str(), &st) != 0) {
+        cout << "ОШИБКА: не удалось получить информацию о файле!" << endl;
+        perror("stat");
+        return;
+    }
+
+    cout << "\n========== ИНФОРМАЦИЯ О ФАЙЛЕ ==========" << endl;
+    cout << "Имя файла: " << filename << endl;
+    cout << "Размер: " << st.st_size << " байт";
+
+    // Если размер больше 1 КБ - показываем в КБ
+    if (st.st_size > 1024) {
+        cout << " (" << st.st_size / 1024 << " КБ)";
+    }
+    cout << endl;
+
+    // Выводим права доступа в формате rwx
+    cout << "Права доступа: ";
+    // Владелец
+    cout << ((st.st_mode & S_IRUSR) ? "r" : "-");
+    cout << ((st.st_mode & S_IWUSR) ? "w" : "-");
+    cout << ((st.st_mode & S_IXUSR) ? "x" : "-");
+    // Группа
+    cout << ((st.st_mode & S_IRGRP) ? "r" : "-");
+    cout << ((st.st_mode & S_IWGRP) ? "w" : "-");
+    cout << ((st.st_mode & S_IXGRP) ? "x" : "-");
+    // Остальные
+    cout << ((st.st_mode & S_IROTH) ? "r" : "-");
+    cout << ((st.st_mode & S_IWOTH) ? "w" : "-");
+    cout << ((st.st_mode & S_IXOTH) ? "x" : "-");
+
+    // Показываем права в восьмеричном виде
+    cout << " (" << oct << (st.st_mode & 0777) << " в восьмеричной)" << endl;
+
+    // Время последнего изменения
+    cout << "Последнее изменение: " << ctime(&st.st_mtime);
+
+    // Владелец и группа (UID/GID)
+    cout << "Владелец (UID): " << st.st_uid << endl;
+    cout << "Группа (GID): " << st.st_gid << endl;
+    cout << "=========================================" << endl;
+}
+
+// ========== ФУНКЦИЯ ДЛЯ ИЗМЕНЕНИЯ ПРАВ ДОСТУПА ==========
+
+void changeMode(string filename = "", string modeStr = "") {
+    if (filename.empty()) {
+        cout << "Введите имя файла: ";
+        cin >> filename;
+    }
+    if (modeStr.empty()) {
+        cout << "Введите права (например 755, 644): ";
+        cin >> modeStr;
+    }
+
+    // Преобразуем строку в число (восьмеричное)
+    // stoi с параметром 8 означает восьмеричную систему
+    int mode = stoi(modeStr, nullptr, 8);
+
+    if (chmod(filename.c_str(), mode) == 0) {
+        cout << "ГОТОВО! Права изменены на " << modeStr << endl;
+    } else {
+        cout << "ОШИБКА при изменении прав!" << endl;
+        perror("chmod");
+    }
+}
+
+// ========== ИНТЕРАКТИВНОЕ МЕНЮ ==========
+
+void interactiveMode() {
+    int choice;
+
+    do {
+        clearScreen();
+        cout << "=========================================" << endl;
+        cout << "          ЛАБОРАТОРНАЯ РАБОТА №2         " << endl;
+        cout << "          ИНТЕРАКТИВНОЕ МЕНЮ             " << endl;
+        cout << "=========================================" << endl;
+        cout << "1. Копировать файл" << endl;
+        cout << "2. Переместить/переименовать файл" << endl;
+        cout << "3. Информация о файле" << endl;
+        cout << "4. Изменить права доступа" << endl;
+        cout << "0. Выход" << endl;
+        cout << "=========================================" << endl;
+        cout << "Ваш выбор: ";
+        cin >> choice;
+
+        switch(choice) {
+            case 1:
+                clearScreen();
+                cout << "=== КОПИРОВАНИЕ ФАЙЛА ===" << endl;
+                copyFile();
+                waitForKey();
+                break;
+
+            case 2:
+                clearScreen();
+                cout << "=== ПЕРЕМЕЩЕНИЕ/ПЕРЕИМЕНОВАНИЕ ===" << endl;
+                moveFile();
+                waitForKey();
+                break;
+
+            case 3:
+                clearScreen();
+                cout << "=== ИНФОРМАЦИЯ О ФАЙЛЕ ===" << endl;
+                fileInfo();
+                waitForKey();
+                break;
+
+            case 4:
+                clearScreen();
+                cout << "=== ИЗМЕНЕНИЕ ПРАВ ДОСТУПА ===" << endl;
+                changeMode();
+                waitForKey();
+                break;
+
+            case 0:
+                cout << "Выход из программы..." << endl;
+                break;
+
+            default:
+                cout << "Неверный выбор! Нажмите Enter..." << endl;
+                cin.ignore();
+                cin.get();
+        }
+    } while(choice != 0);
+}
+
+// ========== ГЛАВНАЯ ФУНКЦИЯ ==========
+
+int main(int argc, char* argv[]) {
+    // Если есть аргументы командной строки
+    if (argc > 1) {
+        // Проверяем ключ --help
+        if (strcmp(argv[1], "--help") == 0) {
+            showHelp();
+            return 0;
+        }
+
+        // Обрабатываем команду cp (копирование)
+        if (strcmp(argv[1], "cp") == 0) {
+            if (argc != 4) {
+                cout << "ОШИБКА: для cp нужно указать 2 файла!" << endl;
+                cout << "Пример: ./lab2 cp file1.txt file2.txt" << endl;
+                return 1;
+            }
+            copyFile(argv[2], argv[3]);
+            return 0;
+        }
+
+        // Обрабатываем команду mv (перемещение)
+        if (strcmp(argv[1], "mv") == 0) {
+            if (argc != 4) {
+                cout << "ОШИБКА: для mv нужно указать 2 файла!" << endl;
+                cout << "Пример: ./lab2 mv old.txt new.txt" << endl;
+                return 1;
+            }
+            moveFile(argv[2], argv[3]);
+            return 0;
+        }
+
+        // Обрабатываем команду info (информация)
+        if (strcmp(argv[1], "info") == 0) {
+            if (argc != 3) {
+                cout << "ОШИБКА: для info нужно указать 1 файл!" << endl;
+                cout << "Пример: ./lab2 info file.txt" << endl;
+                return 1;
+            }
+            fileInfo(argv[2]);
+            return 0;
+        }
+
+        // Обрабатываем команду chmod (изменение прав)
+        if (strcmp(argv[1], "chmod") == 0) {
+            if (argc != 4) {
+                cout << "ОШИБКА: для chmod нужно указать файл и права!" << endl;
+                cout << "Пример: ./lab2 chmod file.txt 755" << endl;
+                return 1;
+            }
+            changeMode(argv[2], argv[3]);
+            return 0;
+        }
+
+        // Если ключ не распознан
+        cout << "Неизвестная команда: " << argv[1] << endl;
+        cout << "Используйте --help для справки" << endl;
+        return 1;
+    }
+
+    // Если без аргументов - запускаем интерактивное меню
+    interactiveMode();
+    return 0;
+}

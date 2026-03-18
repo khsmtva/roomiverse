@@ -52,11 +52,20 @@ body::before {
 .logo {
     font-size: 4rem;
     font-weight: 800;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #667eea, #764ba2, #ff6b6b, #4ecdc4);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    background-size: 300% 300%;
+    animation: gradientFlow 5s ease infinite;
     margin: 0;
     line-height: 1;
+}
+
+/* Анимация для переливающегося градиента */
+@keyframes gradientFlow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }
 
 /* Слоган отдельно */
@@ -293,6 +302,17 @@ body::before {
     font-size: 1.2rem;
     min-width: 50px;
     text-align: right;
+
+}
+
+/* Пустой рейтинг */
+.rating-empty {
+    color: rgba(255, 255, 255, 0.3);
+    text-align: center;
+    padding: 20px;
+    font-style: italic;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
 }
 
 /* Адаптация для телефонов */
@@ -558,12 +578,18 @@ body::before {
     gap: 10px;
 }
 
-.game-btn:hover {
-    background: rgba(102, 126, 234, 0.2);
-    transform: translateY(-3px);
-    border-color: rgba(102, 126, 234, 0.5);
+.game-btn.selected {
+    background: rgba(102, 126, 234, 0.3);
+    border-color: #667eea;
+    box-shadow: 0 0 20px rgba(102, 126, 234, 0.5);
+    animation: pulse 2s infinite;
 }
 
+@keyframes pulse {
+    0% { box-shadow: 0 0 20px rgba(102, 126, 234, 0.5); }
+    50% { box-shadow: 0 0 30px rgba(102, 126, 234, 0.8); }
+    100% { box-shadow: 0 0 20px rgba(102, 126, 234, 0.5); }
+}
 .game-btn.selected {
     background: rgba(102, 126, 234, 0.3);
     border-color: #667eea;
