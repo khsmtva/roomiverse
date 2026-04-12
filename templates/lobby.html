@@ -8,6 +8,24 @@
     <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
 </head>
 <body>
+    <div id="fileOpenWarn" style="display:none;background:#2a1a3d;color:#eee;padding:16px 20px;font-family:system-ui,sans-serif;font-size:15px;line-height:1.5;border-bottom:3px solid #764ba2;">
+        <strong>Страница открыта как файл с диска</strong> (в адресе видно <code style="background:#0003;padding:2px 6px;border-radius:4px;">file:///C:/...</code>).
+        Чат и комнаты так не работают.
+        Запустите в папке проекта <code style="background:#0003;padding:2px 6px;border-radius:4px;">python app.py</code>,
+        затем откройте <a href="http://localhost:5000" style="color:#a78bfa;">http://localhost:5000</a> и зайдите в комнату с главной страницы.
+    </div>
+    <script>
+        (function () {
+            if (location.protocol === 'file:') {
+                var w = document.getElementById('fileOpenWarn');
+                if (w) w.style.display = 'block';
+                document.addEventListener('DOMContentLoaded', function () {
+                    var c = document.querySelector('.container');
+                    if (c) c.style.display = 'none';
+                });
+            }
+        })();
+    </script>
     <!-- СТИЛИ ДЛЯ ФОНА -->
     <style>
         body {
