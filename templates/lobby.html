@@ -98,17 +98,34 @@
 
     <script>
         const urlParams = new URLSearchParams(window.location.search);
-        const roomCode = urlParams.get('code');
-        const playerName = localStorage.getItem('playerName');
+        const roomCode = (urlParams.get('code') || '').trim().toUpperCase();
+        /** Имя для этой вкладки: sessionStorage не делится между вкладками (в отличие от localStorage). */
+        const playerName = (() => {
+            let n = sessionStorage.getItem('playerName');
+            if (n && String(n).trim()) return String(n).trim().slice(0, 20);
+            n = localStorage.getItem('playerName');
+            if (n && String(n).trim()) {
+                const t = String(n).trim().slice(0, 20);
+                sessionStorage.setItem('playerName', t);
+                return t;
+            }
+            return 'Игрок';
+        })();
         let selectedGame = null;
+        
+        if (!roomCode) {
+            window.location.replace('/');
+        } else {
         
         document.getElementById('roomCodeDisplay').textContent = roomCode;
         
         const socket = io();
         
-        socket.emit('join_room', {
-            room_code: roomCode,
-            name: playerName
+        socket.on('connect', () => {
+            socket.emit('join_room', {
+                room_code: roomCode,
+                name: playerName
+            });
         });
         
         socket.on('players_update', (data) => {
@@ -117,11 +134,12 @@
             
             if (data.players && data.players.length > 0) {
                 data.players.forEach(player => {
-                    const firstLetter = player.charAt(0).toUpperCase();
+                    const nameStr = player == null ? 'Игрок' : String(player);
+                    const firstLetter = (nameStr.charAt(0) || '?').toUpperCase();
                     playersList.innerHTML += `
                         <div class="player-card">
                             <div class="player-avatar">${firstLetter}</div>
-                            <span class="player-name">${player}</span>
+                            <span class="player-name">${nameStr}</span>
                         </div>
                     `;
                 });
@@ -217,6 +235,8 @@
             navigator.clipboard.writeText(roomCode);
             alert('Код скопирован в буфер обмена');
         }
+        
+        } // roomCode
     </script>
 </body>
 </html>

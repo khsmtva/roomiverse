@@ -71,20 +71,27 @@
     <script>
         let playerName = '';
         
-        // Пока рейтинг пуст (будет загружаться из БД позже)
-        const mockRating = [];
+        async function loadRating() {
+            try {
+                const res = await fetch('/api/rating/top');
+                const data = await res.json();
+                displayRating(data.players || []);
+            } catch (e) {
+                displayRating([]);
+            }
+        }
         
-        function displayRating() {
+        function displayRating(rows) {
             const list = document.getElementById('ratingList');
             list.innerHTML = '';
             
-            if (mockRating.length === 0) {
+            if (!rows.length) {
                 list.innerHTML = '<div class="rating-empty">Пока нет игроков</div>';
             } else {
-                mockRating.forEach((player, index) => {
+                rows.forEach((player) => {
                     list.innerHTML += `
                         <div class="rating-item">
-                            <span class="rating-position">${index + 1}.</span>
+                            <span class="rating-position">${player.place}.</span>
                             <span class="player-name">${player.name}</span>
                             <span class="player-rating">${player.rating}</span>
                         </div>
@@ -93,7 +100,14 @@
             }
         }
         
-        displayRating();
+        loadRating();
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            const saved = localStorage.getItem('playerName');
+            if (saved) {
+                document.getElementById('playerName').value = saved;
+            }
+        });
         
         async function createRoom() {
             const name = document.getElementById('playerName').value.trim();
@@ -114,6 +128,8 @@
                 const data = await response.json();
                 
                 if (data.success) {
+                    // sessionStorage — своё имя на вкладку; localStorage общий и ломает имена при двух вкладках
+                    sessionStorage.setItem('playerName', name);
                     localStorage.setItem('playerName', name);
                     window.location.href = '/lobby?code=' + data.room_code;
                 } else {
@@ -153,6 +169,7 @@
                 const data = await response.json();
                 
                 if (data.success) {
+                    sessionStorage.setItem('playerName', name);
                     localStorage.setItem('playerName', name);
                     window.location.href = '/lobby?code=' + code;
                 } else {

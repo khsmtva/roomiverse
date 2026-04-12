@@ -54,15 +54,19 @@
             <span style="color: #764ba2;" id="movesCounter">0 ходов</span>
         </div>
 
-        <!-- ИГРОВОЕ ПОЛЕ 9x9 по центру (вытянутое вниз) -->
+        <!-- ИГРОВОЕ ПОЛЕ по центру -->
         <div style="display: flex; justify-content: center; margin: 20px 0;">
             <div class="game-board" id="gameBoard"></div>
         </div>
 
-        <!-- Кнопки действий (одинакового размера по центру) -->
-        <div style="display: flex; gap: 20px; justify-content: center; margin: 30px 0;">
-            <button class="action-btn" onclick="restartGame()" style="width: 180px; padding: 15px; font-size: 1.2rem;">🔄 Новая игра</button>
-            <button class="action-btn" onclick="surrender()" style="width: 180px; padding: 15px; font-size: 1.2rem;">🏳️ Сдаться</button>
+        <!-- Новая игра сразу под полем (ТЗ / UX) -->
+        <div style="display: flex; justify-content: center; margin: 12px 0 8px;">
+            <button type="button" class="action-btn" id="newGameBtn" onclick="startNewGame()"
+                    style="min-width: 220px; padding: 14px 24px; font-size: 1.15rem;">Новая игра</button>
+        </div>
+        <div style="display: flex; justify-content: center; margin: 0 0 24px;">
+            <button type="button" class="action-btn" onclick="surrender()"
+                    style="width: 180px; padding: 12px; font-size: 1rem; opacity: 0.85;">Сдаться</button>
         </div>
 
         <!-- ЧАТ как в лобби -->
@@ -92,8 +96,8 @@
         /* Стили для игрового поля 9x9 (вытянутое вниз) */
         .game-board {
             display: grid;
-            grid-template-columns: repeat(9, 60px);
-            grid-template-rows: repeat(9, 60px);
+            grid-template-columns: repeat(var(--xo-n, 9), 60px);
+            grid-template-rows: repeat(var(--xo-n, 9), 60px);
             gap: 6px;
             background: rgba(255, 255, 255, 0.1);
             padding: 20px;
@@ -153,8 +157,8 @@
         /* Адаптивность для телефонов */
         @media (max-width: 768px) {
             .game-board {
-                grid-template-columns: repeat(9, 40px);
-                grid-template-rows: repeat(9, 40px);
+                grid-template-columns: repeat(var(--xo-n, 9), 40px);
+                grid-template-rows: repeat(var(--xo-n, 9), 40px);
                 gap: 4px;
                 padding: 12px;
             }
@@ -174,8 +178,8 @@
         
         @media (max-width: 480px) {
             .game-board {
-                grid-template-columns: repeat(9, 32px);
-                grid-template-rows: repeat(9, 32px);
+                grid-template-columns: repeat(var(--xo-n, 9), 32px);
+                grid-template-rows: repeat(var(--xo-n, 9), 32px);
                 gap: 3px;
                 padding: 10px;
             }
@@ -189,20 +193,34 @@
     </style>
 
     <script>
-        const roomCode = "{{ room_code }}";
-        const playerName = localStorage.getItem('playerName') || 'Игрок';
-        let currentPlayerId = 'p1';
+        const roomCode = "{{ room_code }}".trim().toUpperCase();
+        const playerName = (() => {
+            let n = sessionStorage.getItem('playerName');
+            if (n && String(n).trim()) return String(n).trim().slice(0, 20);
+            n = localStorage.getItem('playerName');
+            if (n && String(n).trim()) {
+                const t = String(n).trim().slice(0, 20);
+                sessionStorage.setItem('playerName', t);
+                return t;
+            }
+            return 'Игрок';
+        })();
+        /** Ваша роль в партии: p1 (X) или p2 (O); задаётся сервером по sid, не путать с текущим ходом */
+        let myPlayerId = null;
         let gameOver = false;
+        let lastResultBannerKey = null;
+        let boardSize = 9;
         
         const socket = io();
         
-        socket.emit('join_room', {
-            room_code: roomCode,
-            name: playerName
+        socket.on('connect', () => {
+            socket.emit('join_room', { room_code: roomCode, name: playerName });
+            loadGameState();
         });
         
         function loadGameState() {
-            fetch(`/api/game_state/${roomCode}`)
+            const sid = socket.id || '';
+            fetch(`/api/game_state/${roomCode}?sid=${encodeURIComponent(sid)}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.error) return;
@@ -210,8 +228,25 @@
                 });
         }
         
+        function applyPlayerNamesFromState(data) {
+            if (data.xo_players && data.xo_players.length >= 2) {
+                const x = data.xo_players.find(p => p.id === 'p1');
+                const o = data.xo_players.find(p => p.id === 'p2');
+                if (x) document.getElementById('playerXName').textContent = x.name;
+                if (o) document.getElementById('playerOName').textContent = o.name;
+            }
+        }
+        
         function updateGameDisplay(data) {
-            renderBoard(data.board);
+            boardSize = data.board_size || 9;
+            document.getElementById('gameBoard').style.setProperty('--xo-n', String(boardSize));
+            
+            renderBoard(data.board, boardSize);
+            applyPlayerNamesFromState(data);
+            
+            if (data.your_player_id === 'p1' || data.your_player_id === 'p2') {
+                myPlayerId = data.your_player_id;
+            }
             
             document.getElementById('turnIndicator').innerHTML = `Ход: ${data.current_player.symbol}`;
             document.getElementById('movesCounter').innerHTML = `Ходов: ${data.move_count || 0}`;
@@ -228,20 +263,25 @@
                 document.getElementById('playerOStatus').innerHTML = '⚡ ходит';
             }
             
-            currentPlayerId = data.current_player.id;
             gameOver = data.game_over;
             
             if (data.game_over) {
-                alert(data.winner ? `🏆 Победил: ${data.winner.name}` : '🤝 Ничья!');
+                const key = data.is_draw ? 'draw' : (data.winner ? `win:${data.winner.id}` : 'over');
+                if (key !== lastResultBannerKey) {
+                    lastResultBannerKey = key;
+                    alert(data.winner ? `Победил: ${data.winner.name}` : 'Ничья!');
+                }
+            } else {
+                lastResultBannerKey = null;
             }
         }
         
-        function renderBoard(board) {
+        function renderBoard(board, n) {
             const boardDiv = document.getElementById('gameBoard');
             boardDiv.innerHTML = '';
             
-            for (let row = 0; row < 9; row++) {
-                for (let col = 0; col < 9; col++) {
+            for (let row = 0; row < n; row++) {
+                for (let col = 0; col < n; col++) {
                     const cell = document.createElement('div');
                     cell.className = 'game-cell';
                     
@@ -264,7 +304,16 @@
         
         function makeMove(row, col) {
             if (gameOver) {
-                alert('Игра уже закончена!');
+                alert('Игра уже закончена');
+                return;
+            }
+            if (!myPlayerId) {
+                alert('Вы не в списке участников партии (нужны первые два игрока в комнате)');
+                return;
+            }
+            const sid = socket.id;
+            if (!sid) {
+                alert('Нет соединения с сервером');
                 return;
             }
             
@@ -273,29 +322,52 @@
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     room_code: roomCode,
-                    player_id: currentPlayerId,
+                    player_id: myPlayerId,
                     row: row,
-                    col: col
+                    col: col,
+                    sid: sid
                 })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    loadGameState();
+                    if (data.game_state) {
+                        updateGameDisplay(data.game_state);
+                    } else {
+                        loadGameState();
+                    }
                 } else {
                     alert(data.message);
                 }
             });
         }
         
-        function restartGame() {
-            if (confirm('Начать новую игру?')) {
-                location.reload();
+        function startNewGame() {
+            if (!confirm('Начать новую игру? Текущая партия будет сброшена.')) return;
+            const sid = socket.id;
+            if (!sid) {
+                alert('Нет соединения с сервером');
+                return;
             }
+            fetch(`/api/new_game/${roomCode}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ sid: sid })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.game_state) {
+                    lastResultBannerKey = null;
+                    updateGameDisplay(data.game_state);
+                } else {
+                    alert(data.message || 'Не удалось начать новую игру');
+                }
+            })
+            .catch(() => alert('Ошибка сети'));
         }
         
         function surrender() {
-            alert('Функция "сдаться" будет добавлена позже');
+            alert('Функция «сдаться» будет добавлена позже');
         }
         
         // Функции чата
@@ -333,15 +405,18 @@
             chatMessages.scrollTop = chatMessages.scrollHeight;
         });
         
-        socket.on('players_update', (data) => {
-            if (data.players && data.players.length >= 2) {
-                document.getElementById('playerXName').textContent = data.players[0];
-                document.getElementById('playerOName').textContent = data.players[1];
-            }
+        socket.on('players_update', () => {
+            loadGameState();
         });
         
-        loadGameState();
-        setInterval(loadGameState, 2000);
+        socket.on('xo_state_refresh', () => {
+            lastResultBannerKey = null;
+            loadGameState();
+        });
+        
+        setInterval(() => {
+            if (socket.connected) loadGameState();
+        }, 2000);
     </script>
 </body>
 </html>

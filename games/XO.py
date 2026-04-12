@@ -50,14 +50,23 @@ class TicTacToeGame:
         """
         Возвращает полное состояние игры для отправки клиентам
         """
+        xo_players = [
+            {
+                "id": self.players[i]["id"],
+                "name": self.players[i]["name"],
+                "symbol": self.player_symbols[i],
+            }
+            for i in range(min(2, len(self.players)))
+        ]
         return {
-            'board': self.board,
-            'board_size': self.board_size,
-            'current_player': self.get_current_player(),
-            'game_over': self.game_over,
-            'winner': self.winner,
-            'is_draw': self.is_draw,
-            'move_count': len(self.move_history)
+            "board": self.board,
+            "board_size": self.board_size,
+            "current_player": self.get_current_player(),
+            "xo_players": xo_players,
+            "game_over": self.game_over,
+            "winner": self.winner,
+            "is_draw": self.is_draw,
+            "move_count": len(self.move_history),
         }
     
     def make_move(self, player_id: str, row: int, col: int) -> Dict[str, Any]:
