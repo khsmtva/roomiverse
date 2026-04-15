@@ -8,38 +8,23 @@ import string
 from games.XO import TicTacToeGame
 from models import db
 from db_service import get_top_players, persist_finished_tic_tac_toe
+from games.word_guess import WordGuessGame
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "roomiverse-secret"
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///roomiverse.db"
+app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql://roomiverse_user:ltR2FpOkitWE277FqruoyGtBhwoTISej@dpg-d7fk5f3eo5us73ev6m80-a/roomiverse"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db.init_app(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-
-def _migrate_sqlite_players_session_sid() -> None:
-    """Старая БД без session_sid ломает запросы — добавляем колонку."""
-    try:
-        with db.engine.begin() as conn:
-            rows = conn.execute(text("PRAGMA table_info(players)")).fetchall()
-            col_names = {r[1] for r in rows}
-            if "session_sid" not in col_names:
-                conn.execute(text("ALTER TABLE players ADD COLUMN session_sid VARCHAR(64)"))
-                conn.execute(
-                    text("CREATE UNIQUE INDEX IF NOT EXISTS ix_players_session_sid ON players (session_sid)")
-                )
-    except Exception as exc:
-        print(f"Примечание по миграции БД (можно игнорировать на первом запуске): {exc}")
-
-
 with app.app_context():
     db.create_all()
-    _migrate_sqlite_players_session_sid()
+    print("✅ База данных PostgreSQL готова")
 
 # Хранилище данных
-rooms = {}  # {код_комнаты: {players: [], scores: {}, game: None, game_type: ''}}
-players = {}  # {sid: {name: '', room: '', xo_role: None}}
+rooms = {}
+players = {}
 
 
 def generate_room_code():
@@ -79,8 +64,14 @@ def lobby():
 
 @app.route("/game/<room_code>")
 def game_page(room_code):
-    """Страница игры"""
+    """Страница игры Крестики-нолики"""
     return render_template("XO.html", room_code=room_code.strip().upper())
+
+
+@app.route("/word_guess/<room_code>")
+def word_guess_page(room_code):
+    """Страница игры Угадай слово"""
+    return render_template("word_guess.html", room_code=room_code.strip().upper())
 
 
 # ========== API ДЛЯ КОМНАТ ==========
@@ -180,6 +171,26 @@ def start_game(room_code):
                 "game_state": game.get_board_state(),
             }
         )
+    
+    elif game_type == "word_guess":
+        game = WordGuessGame(room_code, players_list)
+        room["game"] = game
+        room["game_type"] = "word_guess"
+
+        socketio.emit(
+            "game_started",
+            {"game_type": "word_guess", "room_code": room_code, "host": game.players[game.host_index]["name"]},
+            room=room_code,
+        )
+
+        return jsonify(
+            {
+                "success": True,
+                "game_type": "word_guess",
+                "game_state": game.get_game_state(),
+            }
+        )
+
     return jsonify({"success": False, "message": "Неизвестный тип игры"})
 
 
@@ -289,6 +300,58 @@ def new_game(room_code):
     return jsonify({"success": True, "game_state": state})
 
 
+# ========== API ДЛЯ УГАДАЙ СЛОВО ==========
+
+@app.route("/api/game_state_word/<room_code>")
+def game_state_word(room_code):
+    if room_code not in rooms:
+        return jsonify({"error": "Игра не найдена"}), 404
+    room = rooms[room_code]
+    if not room["game"] or room["game_type"] != "word_guess":
+        return jsonify({"error": "Игра не начата"}), 404
+    return jsonify(room["game"].get_game_state())
+
+@app.route("/api/set_secret_word", methods=["POST"])
+def set_secret_word():
+    data = request.json
+    room_code = data.get("room_code")
+    word = data.get("word")
+    player_id = data.get("player_id")
+    if room_code not in rooms:
+        return jsonify({"success": False, "message": "Комната не найдена"})
+    room = rooms[room_code]
+    if not room["game"] or room["game_type"] != "word_guess":
+        return jsonify({"success": False, "message": "Игра не начата"})
+    result = room["game"].set_secret_word(player_id, word)
+    if result["success"]:
+        socketio.emit("word_set", {"room_code": room_code, "word_length": result["word_length"]}, room=room_code)
+    return jsonify(result)
+
+@app.route("/api/make_guess", methods=["POST"])
+def make_guess():
+    data = request.json
+    room_code = data.get("room_code")
+    guess_word = data.get("guess_word")
+    player_id = data.get("player_id")
+    if room_code not in rooms:
+        return jsonify({"success": False, "message": "Комната не найдена"})
+    room = rooms[room_code]
+    if not room["game"] or room["game_type"] != "word_guess":
+        return jsonify({"success": False, "message": "Игра не начата"})
+    result = room["game"].make_guess(player_id, guess_word)
+    socketio.emit("guess_update", {
+        "room_code": room_code,
+        "guess": result.get("guess_word"),
+        "result": result.get("result"),
+        "attempts_left": result.get("attempts_left"),
+        "game_over": result.get("game_over"),
+        "winner": result.get("winner"),
+        "secret_word": result.get("secret_word"),
+        "guesses": result.get("guesses")
+    }, room=room_code)
+    return jsonify(result)
+
+
 # ========== СОКЕТЫ ==========
 
 
@@ -344,7 +407,6 @@ def handle_join_room(data):
 
     join_room(room_code)
 
-    # Убираем старую запись этого же подключения, чтобы лобби+игра не дублировали игрока
     rooms[room_code]["players"] = [
         p for p in rooms[room_code]["players"] if p["sid"] != request.sid
     ]
@@ -363,7 +425,6 @@ def handle_join_room(data):
     if player_name not in rooms[room_code]["scores"]:
         rooms[room_code]["scores"][player_name] = 0
 
-    # include_self=True: иначе отправитель не получает своё же событие (чат/список «молчат»)
     socketio.emit(
         "players_update",
         {"players": [p["name"] for p in rooms[room_code]["players"]]},
