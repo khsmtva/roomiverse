@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROOMIVERSE - Космическая гонка</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="top-line"></div>
+    <div class="container">
+        <div class="header-with-lines" style="width:100%; display:block;">
+            <div class="game-topbar">
+                <h1 class="logo" style="margin:0; font-size:32pt;">ROOMIVERSE</h1>
+                <div class="game-topbar-spacer"></div>
+                <div class="game-room-controls">
+                    <span class="game-room-code" id="roomCodeText">{{ room_code }}</span>
+                    <button class="rv-btn" onclick="copyRoomCode()">Копировать</button>
+                </div>
+                <div class="game-player-wrap">
+                    <span class="game-player-label">Ник:</span>
+                    <span class="game-player-name" id="myNameLabel">Игрок</span>
+                </div>
+                <a href="/lobby?code={{ room_code }}" class="rv-btn game-exit-btn">Выход</a>
+            </div>
+        </div>
+
+        <h2 class="game-page-title">Космическая гонка</h2>
+        <p class="game-page-desc">
+            Собери как можно больше звёзд за 30 секунд. Облетай планеты и метеориты — касание смертельно.
+            Тебе может помочь магнит: он притянет все звёзды прямо к ракете. Управляй стрелками влево и вправо.
+            Для начала игры нажми зеленый флажок. Удачи!
+        </p>
+
+        <div style="max-width:1000px; width:100%; margin:0 auto;">
+            <iframe id="spaceFrame" src="/space/local" width="100%" height="560" frameborder="0"
+                    style="display:block; margin:0 auto; background:#000; border-radius:12px;"></iframe>
+        </div>
+        <div style="display:flex; justify-content:center; gap:10px; margin:12px 0 0;">
+            <button class="rv-btn" onclick="restartGame()">Начать заново</button>
+            <button class="rv-btn" onclick="surrender()">Сдаться</button>
+        </div>
+
+        <div class="chat-section" style="height:320px; max-width:1000px; width:100%; margin:16px auto 0;">
+            <h2>Чат</h2>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input-area">
+                <input type="text" class="chat-input" id="chatInput" placeholder="Введите сообщение..." onkeypress="checkEnter(event)">
+                <button class="chat-send-btn" onclick="sendMessage()">Отправить</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const roomCode = "{{ room_code }}".trim().toUpperCase();
+        const playerName = (() => {
+            let n = sessionStorage.getItem('playerName');
+            if (n && String(n).trim()) return String(n).trim().slice(0, 20);
+            n = localStorage.getItem('playerName');
+            return (n && String(n).trim()) ? String(n).trim().slice(0, 20) : 'Игрок';
+        })();
+        document.getElementById('myNameLabel').textContent = playerName;
+
+        const socket = io();
+        let sid = null;
+        let finishSent = false;
+        const clientId = (() => {
+            let id = sessionStorage.getItem('roomiverseClientId');
+            if (!id) {
+                id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('cid-' + Math.random().toString(36).slice(2));
+                sessionStorage.setItem('roomiverseClientId', id);
+            }
+            return id;
+        })();
+        const WIN_HINTS = ['побед', 'winner', 'выигр', 'прошел'];
+
+        socket.on('connect', () => {
+            sid = socket.id;
+            socket.emit('join_room', { room_code: roomCode, name: playerName, client_id: clientId });
+        });
+        socket.on('chat_history', (payload) => {
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.innerHTML = '';
+            (payload?.messages || []).forEach((m) => appendChatMessage(m.sender, m.message));
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+
+        async function reportWinOnce() {
+            if (finishSent || !sid) return;
+            const r = await fetch('/api/finish_game', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ room_code: roomCode, winner_sid: sid, game_type: 'space_race' })
+            });
+            const data = await r.json();
+            if (data.success) finishSent = true;
+        }
+
+        function hookSpaceFrame() {
+            const frame = document.getElementById('spaceFrame');
+            frame.addEventListener('load', () => {
+                try {
+                    const w = frame.contentWindow;
+                    if (!w || w.__spaceHooked) return;
+                    w.__spaceHooked = true;
+                    const originalAlert = w.alert ? w.alert.bind(w) : null;
+                    w.alert = function(message) {
+                        try {
+                            const txt = String(message || '').toLowerCase();
+                            if (WIN_HINTS.some(h => txt.includes(h))) reportWinOnce();
+                        } catch (e) {}
+                        if (originalAlert) originalAlert(message);
+                    };
+                } catch (e) {}
+            });
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            if (!message) return;
+            socket.emit('send_message', { room_code: roomCode, message });
+            input.value = '';
+        }
+        function checkEnter(event) { if (event.key === 'Enter') sendMessage(); }
+        socket.on('new_message', (data) => {
+            appendChatMessage(data.sender, data.message);
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+        function appendChatMessage(sender, message) {
+            const chatMessages = document.getElementById('chatMessages');
+            const timeStr = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            chatMessages.innerHTML += `<div class="chat-message"><span class="message-sender">${sender}</span><span class="message-time">${timeStr}</span><div>${message}</div></div>`;
+        }
+        function copyRoomCode() { navigator.clipboard.writeText(roomCode); }
+        function restartGame() {
+            const frame = document.getElementById('spaceFrame');
+            finishSent = false;
+            frame.src = '/space/local?ts=' + Date.now();
+        }
+        function surrender() {
+            if (!confirm('Сдаться и выйти в лобби?')) return;
+            window.location.href = '/lobby?code=' + encodeURIComponent(roomCode);
+        }
+
+        hookSpaceFrame();
+    </script>
+</body>
+</html>

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROOMIVERSE - Пятнашки</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    <style>
+        body {
+            background: url('https://static.vecteezy.com/system/resources/previews/002/097/706/non_2x/3d-realistic-nebula-space-background-free-photo.jpg') no-repeat center center fixed;
+            background-size: cover;
+        }
+        .fifteen-wrap { max-width: 980px; width: 100%; margin: 0 auto; }
+        .statsbar { display:flex; gap:14px; justify-content:center; align-items:center; flex-wrap:wrap; margin:14px 0; }
+        .stat {
+            color:#4ecdc4; font-weight:800; letter-spacing:.3px;
+            background: rgba(20, 16, 48, 0.55);
+            border: 1px solid rgba(255,255,255,.18);
+            padding: 10px 14px;
+            border-radius: 12px;
+        }
+        .timer { color:#a78bfa; }
+        .timer.danger { color:#ff6b6b; }
+        .board {
+            display:grid; grid-template-columns:repeat(4,70px); grid-template-rows:repeat(4,70px);
+            gap:8px; padding:14px; width:max-content; margin:0 auto;
+            background:#1a1a3a; border:1px solid rgba(255,255,255,.2); border-radius:12px;
+        }
+        .tile {
+            width:70px; height:70px; border:none; border-radius:8px; cursor:pointer;
+            font-size:28px; font-weight:700; background:#2a1a4a; transition:.2s;
+        }
+        .tile.even { color:#667eea; }
+        .tile.odd { color:#764ba2; }
+        .tile:hover { background:#667eea; color:#fff; }
+        .tile.empty { background:#141030; cursor:default; color:transparent; }
+        .control { display:flex; justify-content:center; gap:10px; margin:16px 0; flex-wrap:wrap; }
+        .btn-mini {
+            background:#2a1a4a; color:#fff; border:1px solid rgba(255,255,255,.2);
+            border-radius:10px; padding:10px 14px; cursor:pointer;
+        }
+        .btn-mini:hover { background:#667eea; }
+        .btn-mini.selected {
+            background: rgba(102, 126, 234, 0.35);
+            border-color: rgba(102, 126, 234, 0.9);
+            box-shadow: 0 0 18px rgba(102, 126, 234, 0.35);
+        }
+    </style>
+</head>
+<body>
+    <div class="top-line"></div>
+    <div class="container">
+        <div class="header-with-lines" style="width:100%; display:block; border-bottom-color:#764ba2;">
+            <div class="game-topbar">
+                <h1 class="logo" style="margin:0; font-size:32pt;">ROOMIVERSE</h1>
+                <div class="game-topbar-spacer"></div>
+                <div class="game-room-controls">
+                    <span class="game-room-code" id="roomCodeText">{{ room_code }}</span>
+                    <button class="rv-btn" onclick="copyRoomCode()">Копировать</button>
+                </div>
+                <div class="game-player-wrap">
+                    <span class="game-player-label">Ник:</span>
+                    <span class="game-player-name" id="myNameLabel">Игрок</span>
+                </div>
+                <a href="/lobby?code={{ room_code }}" class="rv-btn game-exit-btn">Выход</a>
+            </div>
+        </div>
+
+        <h2 class="game-page-title">Пятнашки</h2>
+
+        <div class="fifteen-wrap">
+            <div class="statsbar">
+                <div class="stat">ХОДОВ: <span id="movesCount">0</span></div>
+                <div class="stat timer" id="timerBox">ВРЕМЯ: <span id="timerText">05:00</span></div>
+            </div>
+            <div id="board" class="board"></div>
+
+            <div class="control">
+                <button class="btn-mini" id="t3" onclick="setTimeLimitMinutes(3)">⏱ 3 мин</button>
+                <button class="btn-mini" id="t5" onclick="setTimeLimitMinutes(5)">⏱ 5 мин</button>
+                <button class="btn-mini" id="t7" onclick="setTimeLimitMinutes(7)">⏱ 7 мин</button>
+                <button class="rv-btn" onclick="shuffleBoard()">Начать заново</button>
+                <button class="rv-btn" onclick="surrender()">Сдаться</button>
+            </div>
+
+            <div class="chat-section" style="height:280px;">
+                <h2>Чат</h2>
+                <div class="chat-messages" id="chatMessages"></div>
+                <div class="chat-input-area">
+                    <input type="text" class="chat-input" id="chatInput" placeholder="Введите сообщение..." onkeypress="checkEnter(event)">
+                    <button class="chat-send-btn" onclick="sendMessage()">Отправить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const roomCode = "{{ room_code }}".trim().toUpperCase();
+        const playerName = (() => {
+            let n = sessionStorage.getItem('playerName');
+            if (n && String(n).trim()) return String(n).trim().slice(0, 20);
+            n = localStorage.getItem('playerName');
+            return (n && String(n).trim()) ? String(n).trim().slice(0, 20) : 'Игрок';
+        })();
+        document.getElementById('myNameLabel').textContent = playerName;
+
+        const socket = io();
+        let sid = null;
+        let board = [];
+        let moves = 0;
+        let resultSent = false;
+        let boardLocked = false;
+
+        let timeLimitSeconds = 5 * 60;
+        let timeLeftSeconds = timeLimitSeconds;
+        let timerId = null;
+
+        const clientId = (() => {
+            let id = sessionStorage.getItem('roomiverseClientId');
+            if (!id) {
+                id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('cid-' + Math.random().toString(36).slice(2));
+                sessionStorage.setItem('roomiverseClientId', id);
+            }
+            return id;
+        })();
+
+        socket.on('connect', () => {
+            sid = socket.id;
+            socket.emit('join_room', { room_code: roomCode, name: playerName, client_id: clientId });
+        });
+        socket.on('chat_history', (payload) => {
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.innerHTML = '';
+            (payload?.messages || []).forEach((m) => appendChatMessage(m.sender, m.message));
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+
+        function formatTime(sec) {
+            const s = Math.max(0, parseInt(sec || 0, 10));
+            const mm = String(Math.floor(s / 60)).padStart(2, '0');
+            const ss = String(s % 60).padStart(2, '0');
+            return `${mm}:${ss}`;
+        }
+
+        function syncTimerUi() {
+            const timerText = document.getElementById('timerText');
+            const box = document.getElementById('timerBox');
+            if (timerText) timerText.textContent = formatTime(timeLeftSeconds);
+            if (box) {
+                box.classList.toggle('danger', timeLeftSeconds <= 15);
+            }
+        }
+
+        function stopTimer() {
+            if (timerId) clearInterval(timerId);
+            timerId = null;
+        }
+
+        function startTimer() {
+            stopTimer();
+            boardLocked = false;
+            timeLeftSeconds = timeLimitSeconds;
+            syncTimerUi();
+            timerId = setInterval(() => {
+                timeLeftSeconds -= 1;
+                syncTimerUi();
+                if (timeLeftSeconds <= 0) {
+                    stopTimer();
+                    boardLocked = true;
+                    renderBoard();
+                    alert('Время вышло! Попробуйте ещё раз.');
+                }
+            }, 1000);
+        }
+
+        function setTimeLimitMinutes(mins, fromRemote) {
+            const m = Number(mins);
+            if (![3, 5, 7].includes(m)) return;
+            timeLimitSeconds = m * 60;
+            document.getElementById('t3')?.classList.toggle('selected', m === 3);
+            document.getElementById('t5')?.classList.toggle('selected', m === 5);
+            document.getElementById('t7')?.classList.toggle('selected', m === 7);
+            startTimer();
+            if (!fromRemote && socket && socket.connected) {
+                socket.emit('fifteen_timer_set', { room_code: roomCode, minutes: m });
+            }
+        }
+
+        socket.on('fifteen_timer_sync', (data) => {
+            if (!data || String(data.room_code || '').toUpperCase() !== roomCode) return;
+            if (data.from_sid && sid && data.from_sid === sid) return;
+            const m = Number(data.minutes);
+            if (![3, 5, 7].includes(m)) return;
+            setTimeLimitMinutes(m, true);
+        });
+
+        function initBoard() {
+            const arr = [...Array(15).keys()].map(v => v + 1).concat([0]);
+            board = [];
+            for (let r = 0; r < 4; r++) board.push(arr.slice(r * 4, r * 4 + 4));
+            moves = 0;
+            resultSent = false;
+            boardLocked = false;
+            shuffleBoard();
+        }
+
+        function findEmpty() {
+            for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) if (board[r][c] === 0) return [r, c];
+            return [3, 3];
+        }
+
+        function shuffleBoard() {
+            for (let i = 0; i < 150; i++) {
+                const [er, ec] = findEmpty();
+                const next = [[er - 1, ec], [er + 1, ec], [er, ec - 1], [er, ec + 1]]
+                    .filter(([r, c]) => r >= 0 && r < 4 && c >= 0 && c < 4);
+                const [r, c] = next[Math.floor(Math.random() * next.length)];
+                board[er][ec] = board[r][c];
+                board[r][c] = 0;
+            }
+            moves = 0;
+            resultSent = false;
+            boardLocked = false;
+            renderBoard();
+            startTimer();
+        }
+
+        function renderBoard() {
+            const wrap = document.getElementById('board');
+            wrap.innerHTML = '';
+            document.getElementById('movesCount').textContent = String(moves);
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 4; c++) {
+                    const v = board[r][c];
+                    const b = document.createElement('button');
+                    b.className = 'tile';
+                    if (v === 0) {
+                        b.classList.add('empty');
+                        b.disabled = true;
+                        b.textContent = '';
+                    } else {
+                        b.classList.add(v % 2 === 0 ? 'even' : 'odd');
+                        b.textContent = String(v);
+                        b.disabled = !!boardLocked;
+                        if (!boardLocked) b.onclick = () => moveTile(r, c);
+                    }
+                    wrap.appendChild(b);
+                }
+            }
+        }
+
+        function moveTile(r, c) {
+            if (boardLocked) return;
+            const [er, ec] = findEmpty();
+            if (Math.abs(r - er) + Math.abs(c - ec) !== 1) return;
+            board[er][ec] = board[r][c];
+            board[r][c] = 0;
+            moves += 1;
+            renderBoard();
+            if (isWin()) {
+                setTimeout(async () => {
+                    stopTimer();
+                    alert(`Победа! Вы собрали пятнашки за ${moves} ходов. В рейтинг +10 за победу.`);
+                    await reportWin();
+                    shuffleBoard();
+                }, 50);
+            }
+        }
+
+        function isWin() {
+            let k = 1;
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 4; c++) {
+                    if (r === 3 && c === 3) return board[r][c] === 0;
+                    if (board[r][c] !== k) return false;
+                    k += 1;
+                }
+            }
+            return true;
+        }
+
+        async function reportWin() {
+            if (resultSent || !sid) return;
+            const resp = await fetch('/api/finish_game', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    room_code: roomCode,
+                    winner_sid: sid,
+                    game_type: 'fifteen',
+                    moves
+                })
+            });
+            const data = await resp.json();
+            if (data.success) resultSent = true;
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            if (!message) return;
+            socket.emit('send_message', { room_code: roomCode, message });
+            input.value = '';
+        }
+        function checkEnter(event) { if (event.key === 'Enter') sendMessage(); }
+        socket.on('new_message', (data) => {
+            appendChatMessage(data.sender, data.message);
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+        function appendChatMessage(sender, message) {
+            const chatMessages = document.getElementById('chatMessages');
+            const timeStr = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            chatMessages.innerHTML += `<div class="chat-message"><span class="message-sender">${sender}</span><span class="message-time">${timeStr}</span><div>${message}</div></div>`;
+        }
+        function copyRoomCode() { navigator.clipboard.writeText(roomCode); }
+        function surrender() {
+            if (!confirm('Сдаться и выйти в лобби?')) return;
+            stopTimer();
+            window.location.href = '/lobby?code=' + encodeURIComponent(roomCode);
+        }
+        setTimeLimitMinutes(5);
+        initBoard();
+    </script>
+</body>
+</html>

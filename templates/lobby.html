@@ -1,0 +1,356 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROOMIVERSE - Лобби</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+</head>
+<body>
+    <div id="fileOpenWarn" style="display:none;background:#2a1a3d;color:#eee;padding:16px 20px;font-family:system-ui,sans-serif;font-size:15px;line-height:1.5;border-bottom:3px solid #764ba2;">
+        <strong>Страница открыта как файл с диска</strong> (в адресе видно <code style="background:#0003;padding:2px 6px;border-radius:4px;">file:///C:/...</code>).
+        Чат и комнаты так не работают.
+        Запустите в папке проекта <code style="background:#0003;padding:2px 6px;border-radius:4px;">python app.py</code>,
+        затем откройте <a href="http://localhost:5000" style="color:#a78bfa;">http://localhost:5000</a> и зайдите в комнату с главной страницы.
+    </div>
+    <script>
+        (function () {
+            if (location.protocol === 'file:') {
+                var w = document.getElementById('fileOpenWarn');
+                if (w) w.style.display = 'block';
+                document.addEventListener('DOMContentLoaded', function () {
+                    var c = document.querySelector('.container');
+                    if (c) c.style.display = 'none';
+                });
+            }
+        })();
+    </script>
+    <!-- СТИЛИ ДЛЯ ФОНА -->
+    <style>
+        body {
+            background: url('https://static.vecteezy.com/system/resources/previews/002/097/706/non_2x/3d-realistic-nebula-space-background-free-photo.jpg') no-repeat center center fixed;
+            background-size: cover;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 10, 26, 0.6);
+            z-index: -1;
+        }
+    </style>
+
+    <!-- Линия сверху -->
+    <div class="top-line"></div>
+
+    <div class="container">
+        <!-- ТОЛЬКО ROOMIVERSE с линиями -->
+        <div class="header-with-lines" style="width:100%; display:block;">
+            <div class="game-topbar" style="grid-template-columns:auto 1fr auto;">
+                <h1 class="logo">ROOMIVERSE</h1>
+                <div></div>
+                <a href="/" class="rv-btn">На главную</a>
+            </div>
+        </div>
+
+        <!-- Код комнаты по центру -->
+        <div class="room-code-center">
+            <div class="code-box">
+                <span id="roomCodeDisplay">------</span>
+                <button class="copy-btn" onclick="copyRoomCode()">📋 Копировать</button>
+            </div>
+        </div>
+
+        <!-- Основной контент лобби в две колонки -->
+        <div class="lobby-grid">
+            <!-- Левая колонка (участники) -->
+            <div class="players-column">
+                <div class="players-section">
+                    <h2>Участники</h2>
+                    <div class="players-list" id="playersList"></div>
+                </div>
+            </div>
+
+            <!-- Правая колонка (чат) -->
+            <div class="chat-column">
+                <div class="chat-section">
+                    <h2>Чат</h2>
+                    <div class="chat-messages" id="chatMessages"></div>
+                    <div class="chat-input-area">
+                        <input type="text" class="chat-input" id="chatInput" 
+                               placeholder="Введите сообщение..." onkeypress="checkEnter(event)">
+                        <button class="chat-send-btn" onclick="sendMessage()">➤</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Кнопки выбора игры внизу -->
+        <div class="games-section">
+            <h2>Выберите игру</h2>
+            <div class="games-buttons">
+                <button class="game-btn" onclick="selectGame('tic_tac_toe', event)">
+                    <span class="game-icon">❌⭕</span>
+                    Крестики-нолики
+                </button>
+                <button class="game-btn" onclick="selectGame('sea_battle', event)">
+                    <span class="game-icon">⚓</span>
+                    Морской бой
+                </button>
+                <button class="game-btn" onclick="selectGame('goblin', event)">
+                    <span class="game-icon">🧌</span>
+                    ГОБЛИН
+                </button>
+                <button class="game-btn" onclick="selectGame('fifteen', event)">
+                    <span class="game-icon">🧩</span>
+                    Пятнашки
+                </button>
+                <button class="game-btn" onclick="selectGame('space_race', event)">
+                    <span class="game-icon">🚀</span>
+                    Космическая гонка
+                </button>
+            </div>
+            <div class="games-buttons games-buttons-centered-pair">
+                <button class="game-btn" onclick="selectGame('flappy_bird', event)">
+                    <span class="game-icon">🐦</span>
+                    Flappy Bird
+                </button>
+                <button class="game-btn" onclick="selectGame('tower', event)">
+                    <span class="game-icon">🗼</span>
+                    Tower
+                </button>
+            </div>
+            
+            <!-- Кнопка начать игру -->
+            <div class="start-game-container">
+                <button class="start-game-btn" id="startGameBtn" onclick="startGame()" disabled>
+                    Начать игру
+                </button>
+                <p class="selected-game-hint" id="selectedGameHint">Выберите игру</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomCode = (urlParams.get('code') || '').trim().toUpperCase();
+        /** Имя для этой вкладки: sessionStorage не делится между вкладками (в отличие от localStorage). */
+        const playerName = (() => {
+            let n = sessionStorage.getItem('playerName');
+            if (n && String(n).trim()) return String(n).trim().slice(0, 20);
+            n = localStorage.getItem('playerName');
+            if (n && String(n).trim()) {
+                const t = String(n).trim().slice(0, 20);
+                sessionStorage.setItem('playerName', t);
+                return t;
+            }
+            return 'Игрок';
+        })();
+        let selectedGame = null;
+        let isHost = false;
+        let lastPlayerCount = 0;
+        const clientId = (() => {
+            let id = sessionStorage.getItem('roomiverseClientId');
+            if (!id) {
+                id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('cid-' + Math.random().toString(36).slice(2));
+                sessionStorage.setItem('roomiverseClientId', id);
+            }
+            return id;
+        })();
+        
+        if (!roomCode) {
+            window.location.replace('/');
+        } else {
+        
+        document.getElementById('roomCodeDisplay').textContent = roomCode;
+        
+        const socket = io();
+        
+        socket.on('connect', () => {
+            socket.emit('join_room', {
+                room_code: roomCode,
+                name: playerName,
+                client_id: clientId
+            });
+        });
+
+        socket.on('game_started', (data) => {
+            if (!data || String(data.room_code || '').toUpperCase() !== roomCode) return;
+            const gt = data.game_type;
+            if (['tic_tac_toe', 'sea_battle', 'fifteen', 'tower'].includes(gt)) {
+                window.location.href = '/game/' + encodeURIComponent(roomCode);
+            }
+        });
+
+        socket.on('chat_history', (payload) => {
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.innerHTML = '';
+            (payload?.messages || []).forEach((m) => appendChatMessage(m.sender, m.message));
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+        
+        socket.on('players_update', (data) => {
+            const playersList = document.getElementById('playersList');
+            playersList.innerHTML = '';
+            isHost = !!socket.id && !!data.host_sid && socket.id === data.host_sid;
+            lastPlayerCount = (data.players && data.players.length) || 0;
+            updateStartControls();
+            
+            if (data.players && data.players.length > 0) {
+                data.players.forEach(player => {
+                    const nameStr = player == null ? 'Игрок' : String(player);
+                    const firstLetter = (nameStr.charAt(0) || '?').toUpperCase();
+                    playersList.innerHTML += `
+                        <div class="player-card">
+                            <div class="player-avatar">${firstLetter}</div>
+                            <span class="player-name">${nameStr}</span>
+                        </div>
+                    `;
+                });
+            } else {
+                playersList.innerHTML = '<div class="player-card">Ожидание игроков...</div>';
+            }
+        });
+
+        socket.on('joined_room', (data) => {
+            isHost = !!data && !!data.is_host;
+            lastPlayerCount = (data.players && data.players.length) || 0;
+            updateStartControls();
+        });
+
+        
+        socket.on('new_message', (data) => {
+            const chatMessages = document.getElementById('chatMessages');
+            
+            // Форматируем время
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            
+            appendChatMessage(data.sender, data.message, timeStr);
+        });
+
+        function appendChatMessage(sender, message, timeStr) {
+            const chatMessages = document.getElementById('chatMessages');
+            const t = timeStr || new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            chatMessages.innerHTML += `
+                <div class="chat-message">
+                    <span class="message-sender">${sender}</span>
+                    <span class="message-time">${t}</span>
+                    <div>${message}</div>
+                </div>
+            `;
+        }
+        
+        function selectGame(gameType, evt) {
+            selectedGame = gameType;
+            
+            // Подсвечиваем выбранную кнопку
+            document.querySelectorAll('.game-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            evt.currentTarget.classList.add('selected');
+            
+            // Активируем кнопку "Начать игру"
+            updateStartControls();
+            
+            // Показываем какая игра выбрана
+            const gameNames = {
+                'tic_tac_toe': 'Крестики-нолики',
+                'sea_battle': 'Морской бой',
+                'goblin': 'ГОБЛИН',
+                'fifteen': 'Пятнашки',
+                'space_race': 'Космическая гонка',
+                'flappy_bird': 'Flappy Bird',
+                'tower': 'Tower'
+            };
+            document.getElementById('selectedGameHint').textContent = 'Выбрано: ' + gameNames[gameType];
+        }
+
+        function updateStartControls() {
+            const startBtn = document.getElementById('startGameBtn');
+            const hint = document.getElementById('selectedGameHint');
+            const gameNames = {
+                'tic_tac_toe': 'Крестики-нолики',
+                'sea_battle': 'Морской бой',
+                'goblin': 'ГОБЛИН',
+                'fifteen': 'Пятнашки',
+                'space_race': 'Космическая гонка',
+                'flappy_bird': 'Flappy Bird',
+                'tower': 'Tower'
+            };
+            const twoPlayerGames = ['tic_tac_toe', 'sea_battle', 'fifteen', 'tower'];
+            if (!selectedGame) {
+                startBtn.disabled = true;
+                hint.textContent = 'Выберите игру';
+                return;
+            }
+            const name = gameNames[selectedGame];
+            if (twoPlayerGames.includes(selectedGame) && lastPlayerCount !== 2) {
+                startBtn.disabled = true;
+                hint.textContent =
+                    'Выбрано: ' + name + ' — нужно ровно 2 игрока в комнате (сейчас ' + lastPlayerCount + ')';
+                return;
+            }
+            startBtn.disabled = false;
+            hint.textContent = 'Выбрано: ' + name;
+        }
+        
+        function startGame() {
+            if (!selectedGame) {
+                alert('Сначала выберите игру');
+                return;
+            }
+            
+            // Отправляем запрос на сервер для запуска игры
+            fetch(`/api/start_game/${roomCode}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ game_type: selectedGame, sid: socket.id })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Переходим на страницу активной игры
+                    window.location.href = `/game/${roomCode}`;
+                } else {
+                    alert('Ошибка: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Ошибка соединения с сервером');
+            });
+        }
+        
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (message) {
+                socket.emit('send_message', {
+                    room_code: roomCode,
+                    message: message
+                });
+                input.value = '';
+            }
+        }
+        
+        function checkEnter(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+        
+        function copyRoomCode() {
+            navigator.clipboard.writeText(roomCode);
+            alert('Код скопирован в буфер обмена');
+        }
+        
+        } // roomCode
+    </script>
+</body>
+</html>
