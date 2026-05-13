@@ -1,9 +1,0 @@
-﻿services:
-  - type: web
-    name: roomiverse
-    runtime: python
-    repo: https://github.com/khsmtva/roomiverse
-    branch: main
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
-    plan: free
