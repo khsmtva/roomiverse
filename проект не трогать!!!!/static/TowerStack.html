@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tower</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0a1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            color: #fff;
+            user-select: none;
+        }
+        canvas { display: block; margin: 8px auto; border-radius: 10px; cursor: pointer; }
+        .hint { color: #888; font-size: 13px; text-align: center; padding: 4px 12px 12px; max-width: 520px; line-height: 1.4; }
+    </style>
+</head>
+<body>
+<canvas id="c" width="500" height="560"></canvas>
+<p class="hint">Пробел или клик — остановить блок. R — заново. Уложись в 60 секунд и доведи Tower до верха поля!</p>
+<script>
+(function () {
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+
+    const SCREEN_W = canvas.width;
+    const SCREEN_H = canvas.height;
+
+    const BLACK = [10, 10, 26];
+    const DARK_BLUE = [26, 26, 58];
+    const PURPLE = [118, 75, 162];
+    const NEON_BLUE = [102, 126, 234];
+    const NEON_CYAN = [78, 205, 196];
+    const NEON_RED = [255, 107, 107];
+    const WHITE = [255, 255, 255];
+    const GRAY = [100, 100, 100];
+
+    const boardWidth = 10;
+    const boardHeight = 20;
+    const blockSize = Math.floor((SCREEN_W - 40) / boardWidth);
+    const totalW = boardWidth * blockSize;
+    const offsetX = Math.floor((SCREEN_W - totalW) / 2);
+    const offsetY = 72;
+
+    let stars = [];
+    function initStars() {
+        stars = [];
+        for (let i = 0; i < 80; i++) {
+            stars.push({
+                x: Math.random() * SCREEN_W,
+                y: Math.random() * SCREEN_H,
+                b: 50 + Math.random() * 150
+            });
+        }
+    }
+
+    let currentHeight = 0;
+    let blockW = boardWidth;
+    let blockPos = 0;
+    let blockDir = 1;
+    let gameOver = false;
+    let win = false;
+    let scorePts = 0;
+    let startTime = 0;
+    const timeLimit = 60000;
+    let lastMoveTime = 0;
+    let moveDelay = 50;
+    let prevBlockW = boardWidth;
+    let prevBlockPos = 0;
+    let winNotified = false;
+
+    function resetGame() {
+        currentHeight = 0;
+        blockW = boardWidth;
+        blockPos = 0;
+        blockDir = 1;
+        gameOver = false;
+        win = false;
+        scorePts = 0;
+        startTime = performance.now();
+        lastMoveTime = startTime;
+        moveDelay = 50;
+        prevBlockW = boardWidth;
+        prevBlockPos = 0;
+        winNotified = false;
+    }
+
+    function notifyWin() {
+        if (winNotified) return;
+        winNotified = true;
+        try {
+            if (typeof window.onGameWin === 'function') window.onGameWin();
+        } catch (e) {}
+    }
+
+    function fillRect(x, y, w, h, rgb, a = 1) {
+        ctx.fillStyle = 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',' + a + ')';
+        ctx.fillRect(x, y, w, h);
+    }
+
+    function strokeRoundRect(x, y, w, h, r, rgb, lineW) {
+        ctx.strokeStyle = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')';
+        ctx.lineWidth = lineW;
+        ctx.beginPath();
+        const rr = Math.min(r, w / 2, h / 2);
+        if (typeof ctx.roundRect === 'function') {
+            ctx.roundRect(x, y, w, h, rr);
+        } else {
+            ctx.rect(x, y, w, h);
+        }
+        ctx.stroke();
+    }
+
+    function drawBackground() {
+        fillRect(0, 0, SCREEN_W, SCREEN_H, BLACK, 1);
+        for (const s of stars) {
+            ctx.fillStyle = 'rgb(' + s.b + ',' + s.b + ',' + s.b + ')';
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, 1, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    function drawBoard() {
+        const pad = 10;
+        fillRect(offsetX - pad, offsetY - pad, totalW + pad * 2, boardHeight * blockSize + pad * 2, DARK_BLUE, 1);
+        strokeRoundRect(offsetX - pad, offsetY - pad, totalW + pad * 2, boardHeight * blockSize + pad * 2, 10, PURPLE, 2);
+
+        for (let row = 0; row < boardHeight; row++) {
+            for (let col = 0; col < boardWidth; col++) {
+                const x = offsetX + col * blockSize;
+                const y = offsetY + (boardHeight - 1 - row) * blockSize;
+                const w = blockSize - 2;
+                const h = blockSize - 2;
+                if (row < currentHeight) {
+                    const color = row === currentHeight - 1 ? NEON_CYAN : NEON_BLUE;
+                    fillRect(x + 1, y + 1, w, h, color, 1);
+                    strokeRoundRect(x + 1, y + 1, w, h, 4, WHITE, 1);
+                } else {
+                    fillRect(x + 1, y + 1, w, h, [30, 30, 50], 1);
+                    strokeRoundRect(x + 1, y + 1, w, h, 4, GRAY, 1);
+                }
+            }
+        }
+
+        if (!gameOver) {
+            const y = offsetY + (boardHeight - 1 - currentHeight) * blockSize;
+            const pulse = (Math.sin(performance.now() * 0.008) + 1) / 2;
+            const glow = [
+                Math.floor(102 + pulse * 50),
+                Math.floor(126 + pulse * 50),
+                Math.floor(234 + pulse * 20)
+            ];
+            for (let col = 0; col < blockW; col++) {
+                const x = offsetX + (blockPos + col) * blockSize;
+                const w = blockSize - 2;
+                const h = blockSize - 2;
+                fillRect(x + 1, y + 1, w, h, glow, 1);
+                strokeRoundRect(x + 1, y + 1, w, h, 4, WHITE, 2);
+            }
+        }
+    }
+
+    function drawUI() {
+        const elapsed = performance.now() - startTime;
+        const timeLeft = Math.max(0, timeLimit - elapsed);
+        let sec = Math.floor(timeLeft / 1000);
+        const min = Math.floor(sec / 60);
+        sec = sec % 60;
+        ctx.font = '16px Segoe UI, sans-serif';
+        ctx.fillStyle = 'rgb(' + NEON_BLUE[0] + ',' + NEON_BLUE[1] + ',' + NEON_BLUE[2] + ')';
+        ctx.textAlign = 'right';
+        ctx.fillText('\u23F1 ' + String(min).padStart(2, '0') + ':' + String(sec).padStart(2, '0'), SCREEN_W - 16, 28);
+        ctx.textAlign = 'left';
+
+        if (currentHeight >= boardHeight && gameOver && win) {
+            ctx.font = 'bold 28px Segoe UI, sans-serif';
+            ctx.fillStyle = 'rgb(' + NEON_CYAN[0] + ',' + NEON_CYAN[1] + ',' + NEON_CYAN[2] + ')';
+            ctx.textAlign = 'center';
+            ctx.fillText('\u041F\u041E\u0411\u0415\u0414\u0410!', SCREEN_W / 2, 36);
+            ctx.textAlign = 'left';
+        } else {
+            ctx.font = '16px Segoe UI, sans-serif';
+            ctx.fillStyle = 'rgb(' + NEON_BLUE[0] + ',' + NEON_BLUE[1] + ',' + NEON_BLUE[2] + ')';
+            ctx.fillText('\uD83C\uDFF7\uFE0F \u0412\u044B\u0441\u043E\u0442\u0430: ' + currentHeight + '/' + boardHeight, 14, 28);
+        }
+
+        scorePts = currentHeight * 10;
+        ctx.fillText('\u2B50 \u041E\u0447\u043A\u0438: ' + scorePts, 14, 52);
+
+        if (!gameOver) {
+            ctx.font = '14px Segoe UI, sans-serif';
+            ctx.fillStyle = 'rgb(' + GRAY[0] + ',' + GRAY[1] + ',' + GRAY[2] + ')';
+            ctx.textAlign = 'center';
+            ctx.fillText('\u041D\u0430\u0436\u043C\u0438 \u041F\u0420\u041E\u0411\u0415\u041B \u0438\u043B\u0438 \u043A\u043B\u0438\u043A, \u0447\u0442\u043E\u0431\u044B \u0443\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C \u0431\u043B\u043E\u043A', SCREEN_W / 2, SCREEN_H - 10);
+            ctx.textAlign = 'left';
+        }
+
+        if (gameOver) {
+            ctx.textAlign = 'center';
+            const msg = win
+                ? '\u041F\u041E\u0411\u0415\u0414\u0410! Tower: ' + currentHeight + ' \u0443\u0440\u043E\u0432\u043D\u0435\u0439.'
+                : (timeLeft <= 0 && !win
+                    ? '\u0412\u0420\u0415\u041C\u042F \u0412\u042B\u0428\u041B\u041E! \u0412\u044B\u0441\u043E\u0442\u0430: ' + currentHeight + '.'
+                    : '\u041F\u0440\u043E\u043C\u0430\u0445! \u0412\u044B\u0441\u043E\u0442\u0430: ' + currentHeight + '.');
+            ctx.font = 'bold 20px Segoe UI, sans-serif';
+            ctx.fillStyle = win
+                ? 'rgb(' + NEON_CYAN[0] + ',' + NEON_CYAN[1] + ',' + NEON_CYAN[2] + ')'
+                : 'rgb(' + NEON_RED[0] + ',' + NEON_RED[1] + ',' + NEON_RED[2] + ')';
+            ctx.fillText(msg, SCREEN_W / 2, SCREEN_H / 2 - 24);
+            ctx.font = '14px Segoe UI, sans-serif';
+            ctx.fillStyle = '#fff';
+            ctx.fillText('\u041D\u0430\u0436\u043C\u0438 R \u0434\u043B\u044F \u043D\u043E\u0432\u043E\u0439 \u0438\u0433\u0440\u044B', SCREEN_W / 2, SCREEN_H / 2 + 8);
+            ctx.textAlign = 'left';
+            if (win) notifyWin();
+        }
+    }
+
+    function moveBlock() {
+        const now = performance.now();
+        if (now - lastMoveTime < moveDelay || gameOver) return;
+        blockPos += blockDir;
+        if (blockPos >= boardWidth - blockW) {
+            blockPos = boardWidth - blockW;
+            blockDir = -1;
+        } else if (blockPos <= 0) {
+            blockPos = 0;
+            blockDir = 1;
+        }
+        lastMoveTime = now;
+    }
+
+    function stopBlock() {
+        if (gameOver) return;
+
+        if (currentHeight === 0) {
+            blockW = boardWidth;
+            blockPos = 0;
+            currentHeight = 1;
+            prevBlockW = blockW;
+            prevBlockPos = blockPos;
+            return;
+        }
+
+        const prevStart = prevBlockPos;
+        const prevEnd = prevBlockPos + prevBlockW;
+        const currStart = blockPos;
+        const currEnd = blockPos + blockW;
+        const overlapStart = Math.max(prevStart, currStart);
+        const overlapEnd = Math.min(prevEnd, currEnd);
+        const newW = overlapEnd - overlapStart;
+
+        if (newW <= 0) {
+            gameOver = true;
+            win = false;
+            return;
+        }
+
+        blockW = newW;
+        blockPos = overlapStart;
+        currentHeight += 1;
+        prevBlockW = blockW;
+        prevBlockPos = blockPos;
+        moveDelay = Math.max(30, 50 - currentHeight * 2);
+
+        if (currentHeight >= boardHeight) {
+            gameOver = true;
+            win = true;
+        }
+    }
+
+    function update() {
+        if (!gameOver) {
+            const elapsed = performance.now() - startTime;
+            if (elapsed >= timeLimit) {
+                gameOver = true;
+                win = false;
+            }
+            moveBlock();
+        }
+    }
+
+    function frame() {
+        update();
+        drawBackground();
+        drawBoard();
+        drawUI();
+        requestAnimationFrame(frame);
+    }
+
+    window.addEventListener('keydown', function (e) {
+        if (e.code === 'Space') {
+            e.preventDefault();
+            stopBlock();
+        }
+        if (e.key === 'r' || e.key === 'R') {
+            if (gameOver) resetGame();
+        }
+    });
+    canvas.addEventListener('click', function () {
+        stopBlock();
+    });
+
+    initStars();
+    resetGame();
+    requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
