@@ -5,5 +5,9 @@
     repo: https://github.com/khsmtva/roomiverse
     branch: main
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    startCommand: gunicorn --bind 0.0.0.0:$PORT app:app
+    healthCheckPath: /
     plan: free
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8

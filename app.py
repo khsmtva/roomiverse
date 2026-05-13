@@ -1,6 +1,9 @@
 ﻿import os
 from datetime import datetime
 import time
+import logging
+import threading
+import webbrowser
 
 from flask import Flask, render_template, request, jsonify, redirect, send_file
 from flask_socketio import SocketIO, emit, join_room
@@ -899,9 +902,14 @@ def handle_tower_pvp_defeat(data):
 # ========== ЗАПУСК ==========
 
 if __name__ == "__main__":
+    url = "http://localhost:5000"
+    # Открываем только одну вкладку и уменьшаем шум логов локального dev-сервера.
+    threading.Timer(1.0, lambda: webbrowser.open(url)).start()
+    logging.getLogger("werkzeug").setLevel(logging.ERROR)
+
     print("\n" + "=" * 60)
     print("ROOMIVERSE - СЕРВЕР ЗАПУЩЕН")
     print("=" * 60)
-    print("Главная страница: http://localhost:5000")
+    print(f"Главная страница: {url}")
     print("=" * 60 + "\n")
-    socketio.run(app, debug=True, host="0.0.0.0", port=5000)
+    socketio.run(app, debug=False, host="0.0.0.0", port=5000, use_reloader=False)
