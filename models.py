@@ -30,7 +30,7 @@ class Player(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     nickname = db.Column(db.String(20), nullable=False, index=True)
-    # Различение игроков с одинаковым именем по сессии (ТЗ 3.5)
+    # Стабильный идентификатор клиента (lobby sessionStorage); при отсутствии — socket sid
     session_sid = db.Column(db.String(64), nullable=True, unique=True, index=True)
     rating = db.Column(db.Integer, nullable=False, default=0, index=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
