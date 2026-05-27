@@ -18,6 +18,7 @@ class TicTacToeGame:
         """
         self.room_id = room_id
         self.players = players
+        # размер поля можно переиспользовать для разных режимов
         self.board_size = board_size
         self.win_condition = 5  # Для победы нужно 5 в ряд
         
@@ -36,6 +37,7 @@ class TicTacToeGame:
         self.is_draw = False
         
         # История ходов
+        # хранение истории нужно для статистики и реплея
         self.move_history = []
     
     def get_current_player(self) -> Dict[str, Any]:
@@ -106,6 +108,7 @@ class TicTacToeGame:
             }
         
         # ВСЕ ПРОВЕРКИ ПРОЙДЕНЫ - совершаем ход
+        # запись символа в выбранную клетку
         symbol = self.player_symbols[self.current_player_index]
         self.board[row][col] = symbol
         

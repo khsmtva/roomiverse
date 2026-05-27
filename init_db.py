@@ -1,25 +1,14 @@
 """
-Инициализация файла SQLite для ROOMIVERSE (схема из models.py).
-
-Как пользоваться:
-  1) Установите зависимости: pip install -r requirements.txt
-  2) Из папки проекта выполните: python init_db.py
-     Создаётся файл roomiverse.db в текущей директории.
-
-При обычном запуске сервера (python app.py) таблицы создаются автоматически
-(db.create_all + лёгкая миграция для колонки session_sid у старых БД).
-
-Файл БД: sqlite:///roomiverse.db (лежит рядом с app.py, если запускаете оттуда).
+Инициализация файла SQLite для ROOMIVERSE 
 """
 
 from sqlalchemy import text
-
 from flask import Flask
-
 from models import db
 
 
 def create_app() -> Flask:
+    # отдельный factory для утилит и миграций
     app = Flask(__name__)
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///roomiverse.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -29,6 +18,7 @@ def create_app() -> Flask:
 
 def _migrate_sqlite_players_session_sid() -> None:
     try:
+        # проверка наличия колонки для старых баз
         with db.engine.begin() as conn:
             rows = conn.execute(text("PRAGMA table_info(players)")).fetchall()
             col_names = {r[1] for r in rows}
@@ -46,6 +36,7 @@ def _migrate_sqlite_players_session_sid() -> None:
 def main() -> None:
     app = create_app()
     with app.app_context():
+        # создание таблиц перед запуском сервера
         db.create_all()
         _migrate_sqlite_players_session_sid()
         print("Готово. Файл: roomiverse.db в папке запуска.")

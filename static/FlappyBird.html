@@ -28,6 +28,7 @@
     </style>
 </head>
 <body>
+<!-- одиночный режим flappy bird -->
 <canvas id="gameCanvas" width="400" height="600"></canvas>
 
 <script>
@@ -37,13 +38,13 @@
 
         const W = 400, H = 600;
 
-        // === НАСТРОЙКИ ИГРЫ (УТЯЖЕЛЁННАЯ ПТИЧКА) ===
-        const GRAVITY = 0.28;          // сильное притяжение (было 0.15)
-        const JUMP_POWER = -4.8;       // прыжок мощнее чтобы компенсировать гравитацию
-        const PIPE_SPEED = 2.4;        // быстрые трубы
-        const PIPE_SPACING = 240;       // расстояние между трубами
+        // === НАСТРОЙКИ ИГРЫ (УМЕНЬШЕННОЕ ПРИТЯЖЕНИЕ) ===
+        const GRAVITY = 0.12;          // уменьшенное притяжение (было 0.18)
+        const JUMP_POWER = -3.8;       // хороший прыжок
+        const PIPE_SPEED = 1.6;        // комфортная скорость труб
+        const PIPE_SPACING = 260;       // расстояние между трубами
         const PIPE_WIDTH = 52;
-        const PIPE_GAP = 155;           // узкий проход
+        const PIPE_GAP = 165;           // широкий проход
         
         const WIN_SECONDS = 60;          
         let gameStartTime = 0;
@@ -127,9 +128,9 @@
             birdVelocity += GRAVITY;
             birdY += birdVelocity;
             
-            wingAngle += 0.25;
-            if(wingAngle > 0.6) wingAngle = 0.6;
-            if(wingAngle < -0.9) wingAngle = -0.9;
+            wingAngle += 0.15;
+            if(wingAngle > 0.5) wingAngle = 0.5;
+            if(wingAngle < -0.8) wingAngle = -0.8;
 
             if(birdY + BIRD_RADIUS >= H || birdY - BIRD_RADIUS <= 0) {
                 score = 0;

@@ -1,17 +1,12 @@
-"""
-Полная очистка таблиц SQLite (рейтинг, комнаты, игры, чат).
-
-Остановите сервер (`python app.py`), иначе SQLite может ответить «database is locked».
-Из папки проекта: python reset_db.py
-"""
-
+#для полной пересборки (сброса) базы данных
 from app import app, db, _migrate_sqlite_players_session_sid
-
 
 def main() -> None:
     with app.app_context():
+        # полная пересборка структуры базы
         db.drop_all()
         db.create_all()
+        # возврат совместимости для старого формата данных
         _migrate_sqlite_players_session_sid()
         print("База очищена и пересоздана.")
 

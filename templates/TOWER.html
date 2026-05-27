@@ -8,6 +8,7 @@
     <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
 </head>
 <body>
+    <!-- экран для парной игры tower -->
     <div class="top-line"></div>
     <div class="container">
         <div class="header-with-lines" style="width:100%; display:block;">
@@ -29,7 +30,7 @@
         <h2 class="game-page-title" style="margin-top:22px;">Tower</h2>
         <p class="game-page-desc" style="font-size:1.05rem;">
             Дуэль на двоих: у каждого своё поле. Кто первым промахнется мимо предыдущего блока (GAME OVER) или нажмёт «Сдаться», тот проигрывает; соперник получает +10 в рейтинг.
-            Пробел или клик по полю — установить блок. В меню нажми «СТАРТ».
+            Пробел или клик по полю — установить блок. «Начать заново» или клавиша R — новая попытка на вашем поле.
         </p>
 
         <div style="max-width:980px; width:100%; margin:0 auto 22px;">
@@ -108,10 +109,6 @@
             alert(won
                 ? 'Вы выиграли! +10 в рейтинг (соперник проиграл или сдался).'
                 : 'Вы проиграли. Соперник получает +10 в рейтинг.');
-            const frame = document.getElementById('towerFrame');
-            if (frame) frame.style.pointerEvents = 'none';
-            const rb = document.getElementById('towerRestartBtn');
-            if (rb) rb.disabled = true;
         });
 
         function sendMessage() {
@@ -147,9 +144,28 @@
             navigator.clipboard.writeText(roomCode);
         }
         function restartGame() {
-            if (matchEnded) return;
             const frame = document.getElementById('towerFrame');
-            frame.src = '/tower/local?ts=' + Date.now();
+            if (!frame) return;
+            frame.style.pointerEvents = '';
+            const reloadWithAutostart = function () {
+                frame.onload = function () {
+                    frame.onload = null;
+                    try {
+                        if (frame.contentWindow && frame.contentWindow.restartTowerGame) {
+                            frame.contentWindow.restartTowerGame();
+                        }
+                    } catch (e) {}
+                };
+                frame.src = '/tower/local?autostart=1&ts=' + Date.now();
+            };
+            try {
+                const win = frame.contentWindow;
+                if (win && typeof win.restartTowerGame === 'function') {
+                    win.restartTowerGame();
+                    return;
+                }
+            } catch (e) {}
+            reloadWithAutostart();
         }
         async function surrender() {
             if (!confirm('Сдаться? Соперник получит победу (+10 в рейтинг).')) return;

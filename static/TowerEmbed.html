@@ -50,6 +50,7 @@
   </style>
 </head>
 <body>
+  <!-- локальная версия мини игры tower -->
   <div class="game-screen">
     <div id="score">0</div>
     <canvas id="game" width="400" height="400" aria-label="Игровое поле"></canvas>
@@ -123,6 +124,21 @@
     resetState();
     gameState = 'playing';
   }
+
+  function restartTowerGame() {
+    resetState();
+    gameState = 'playing';
+    buttons = [];
+    draw();
+  }
+
+  window.restartTowerGame = restartTowerGame;
+
+  window.addEventListener('message', function (e) {
+    if (e.origin !== window.location.origin) return;
+    if (!e.data || e.data.type !== 'tower:restart') return;
+    restartTowerGame();
+  });
 
   function updateCameraScroll() {
     var minY = blocks.reduce(function (m, b) {
@@ -213,7 +229,7 @@
       var restartX = canvas.width/2 - 70;
       var restartY = canvas.height/2 + 20;
       drawRoundedButton(restartX, restartY, 140, 50, "ЗАНОВО", "#4CAF50");
-      buttons = [{ x: restartX, y: restartY, w: 140, h: 50, action: restartFromGameOver }];
+      buttons = [{ x: restartX, y: restartY, w: 140, h: 50, action: restartTowerGame }];
     }
   }
 
@@ -325,7 +341,9 @@
       place();
     } else if (e.key === 'r' || e.key === 'R') {
       e.preventDefault();
-      if (gameState === 'gameover') restartFromGameOver();
+      if (gameState === 'menu' || gameState === 'gameover' || gameState === 'playing') {
+        restartTowerGame();
+      }
     }
   }
 
@@ -334,6 +352,9 @@
   window.addEventListener('keydown', handleKeydown);
 
   resetState();
+  if (/[?&]autostart=1(?:&|$)/.test(window.location.search)) {
+    startGame();
+  }
   requestAnimationFrame(tick);
 })();
   </script>
